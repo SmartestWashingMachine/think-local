@@ -24,6 +24,8 @@ describe('Chat', () => {
     onSendMessage: vi.fn(),
     onImportConversations: vi.fn(),
     onExportConversations: vi.fn(() => []),
+    onOpenModelSelector: vi.fn(),
+    modelStatus: 'idle',
   };
 
   it('renders sidebar and message area', () => {

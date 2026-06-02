@@ -96,8 +96,8 @@ export function useConversations() {
   );
 
   const sendMessage = useCallback(
-    async (content: string) => {
-      if (!activeId) return;
+    async (content: string, onResponse?: (messages: Message[]) => Promise<string>) => {
+      if (!activeId || !activeConversation) return;
 
       const userMessage: Message = {
         id: generateId(),
@@ -106,15 +106,15 @@ export function useConversations() {
         createdAt: Date.now(),
       };
 
-      // Add user message and auto-generate title if first message
+      const messagesAfterUser = [...activeConversation.messages, userMessage];
+
       setConversations((prev) =>
         prev.map((c) => {
           if (c.id !== activeId) return c;
-          const updated = {
+          const updated: Conversation = {
             ...c,
-            messages: [...c.messages, userMessage],
+            messages: messagesAfterUser,
           };
-          // Auto-title from first user message
           if (c.messages.length === 0) {
             updated.title = content.length > 40 ? `${content.slice(0, 40)}…` : content;
           }
@@ -122,13 +122,23 @@ export function useConversations() {
         }),
       );
 
-      // Simulate delay then add dummy response
-      await new Promise((r) => setTimeout(r, 1000));
+      let responseContent: string;
+
+      if (onResponse) {
+        try {
+          responseContent = await onResponse(messagesAfterUser);
+        } catch {
+          responseContent = DUMMY_RESPONSE;
+        }
+      } else {
+        await new Promise((r) => setTimeout(r, 1000));
+        responseContent = DUMMY_RESPONSE;
+      }
 
       const assistantMessage: Message = {
         id: generateId(),
         role: 'assistant',
-        content: DUMMY_RESPONSE,
+        content: responseContent,
         createdAt: Date.now(),
       };
 
@@ -139,7 +149,7 @@ export function useConversations() {
         }),
       );
     },
-    [activeId],
+    [activeId, activeConversation],
   );
 
   const renameConversation = useCallback((id: string, title: string) => {

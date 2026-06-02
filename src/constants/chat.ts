@@ -5,4 +5,5 @@ export const STORAGE_KEYS = {
   conversations: 'secret-chatter-conversations',
   activeId: 'secret-chatter-active-id',
   theme: 'secret-chatter-theme',
+  model: 'secret-chatter-active-model',
 } as const;

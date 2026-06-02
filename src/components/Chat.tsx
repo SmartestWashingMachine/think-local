@@ -17,6 +17,8 @@ interface ChatProps {
   onSendMessage: (content: string) => Promise<void>;
   onImportConversations: (conversations: Conversation[]) => void;
   onExportConversations: () => Conversation[];
+  onOpenModelSelector: () => void;
+  modelStatus: string;
 }
 
 export default function Chat({
@@ -31,6 +33,8 @@ export default function Chat({
   onSendMessage,
   onImportConversations,
   onExportConversations,
+  onOpenModelSelector,
+  modelStatus,
 }: ChatProps) {
   const [sending, setSending] = useState(false);
 
@@ -55,6 +59,8 @@ export default function Chat({
         onImport={onImportConversations}
         onExport={onExportConversations}
         onToggleTheme={onToggleTheme}
+        onOpenModelSelector={onOpenModelSelector}
+        modelStatus={modelStatus}
       />
       <main className="chat__main">
         {!activeConversation ? (

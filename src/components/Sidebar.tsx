@@ -12,6 +12,8 @@ interface SidebarProps {
   onImport: (conversations: Conversation[]) => void;
   onExport: () => Conversation[];
   onToggleTheme: () => void;
+  onOpenModelSelector: () => void;
+  modelStatus: string;
 }
 
 export default function Sidebar({
@@ -24,6 +26,8 @@ export default function Sidebar({
   onImport,
   onExport,
   onToggleTheme,
+  onOpenModelSelector,
+  modelStatus,
 }: SidebarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -115,6 +119,16 @@ export default function Sidebar({
       </nav>
 
       <div className="sidebar__footer">
+        <button className="sidebar__model-btn" onClick={onOpenModelSelector} type="button" title="Manage models">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" />
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+            <line x1="12" y1="22.08" x2="12" y2="12" />
+          </svg>
+          <span>Models</span>
+          {modelStatus === 'loaded' && <span className="sidebar__model-dot sidebar__model-dot--loaded" />}
+          {(modelStatus === 'downloading' || modelStatus === 'loading') && <span className="sidebar__model-dot sidebar__model-dot--busy" />}
+        </button>
         <div className="sidebar__io-buttons">
           <button className="sidebar__io-btn" onClick={handleImportClick} type="button" title="Import conversations">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

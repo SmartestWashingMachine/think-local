@@ -20,6 +20,8 @@ describe('Sidebar', () => {
     onImport: vi.fn(),
     onExport: vi.fn(() => []),
     onToggleTheme: vi.fn(),
+    onOpenModelSelector: vi.fn(),
+    modelStatus: 'idle',
   };
 
   it('renders the app title', () => {

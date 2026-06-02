@@ -234,4 +234,52 @@ describe('useConversations', () => {
     expect(exported).toHaveLength(2);
     expect(exported[0].title).toBe('New conversation');
   });
+
+  it('uses onResponse callback when provided', async () => {
+    const { result } = renderHook(() => useConversations());
+
+    act(() => {
+      result.current.createConversation();
+    });
+
+    const onResponse = vi.fn(async (messages) => {
+      expect(messages).toHaveLength(1);
+      expect(messages[0].role).toBe('user');
+      expect(messages[0].content).toBe('Hello AI!');
+      return 'Hello, human!';
+    });
+
+    await act(async () => {
+      await result.current.sendMessage('Hello AI!', onResponse);
+    });
+
+    const conv = result.current.activeConversation!;
+    expect(conv.messages).toHaveLength(2);
+    expect(conv.messages[0].role).toBe('user');
+    expect(conv.messages[0].content).toBe('Hello AI!');
+    expect(conv.messages[1].role).toBe('assistant');
+    expect(conv.messages[1].content).toBe('Hello, human!');
+    expect(onResponse).toHaveBeenCalledTimes(1);
+  });
+
+  it('falls back to dummy response when onResponse throws', async () => {
+    const { result } = renderHook(() => useConversations());
+
+    act(() => {
+      result.current.createConversation();
+    });
+
+    const onResponse = vi.fn(async () => {
+      throw new Error('AI failed');
+    });
+
+    await act(async () => {
+      await result.current.sendMessage('Hello AI!', onResponse);
+    });
+
+    const conv = result.current.activeConversation!;
+    expect(conv.messages).toHaveLength(2);
+    expect(conv.messages[1].role).toBe('assistant');
+    expect(conv.messages[1].content).toBe(DUMMY_RESPONSE);
+  });
 });
