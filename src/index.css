@@ -35,13 +35,13 @@
     --text: #9ca3af;
     --text-h: #f3f4f6;
     --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #a78bfa;
-    --accent-bg: rgba(167, 139, 250, 0.15);
-    --accent-border: rgba(167, 139, 250, 0.5);
+    --border: #3d404e;
+    --code-bg: #272a37;
+    --accent: #7c3aed;
+    --accent-bg: rgba(124, 58, 237, 0.15);
+    --accent-border: rgba(124, 58, 237, 0.5);
     --sidebar-bg: #1a1b23;
-    --message-bg: #1f2028;
+    --message-bg: #272a37;
   }
 }
 
@@ -50,13 +50,13 @@
   --text: #9ca3af;
   --text-h: #f3f4f6;
   --bg: #16171d;
-  --border: #2e303a;
-  --code-bg: #1f2028;
-  --accent: #a78bfa;
-  --accent-bg: rgba(167, 139, 250, 0.15);
-  --accent-border: rgba(167, 139, 250, 0.5);
+  --border: #3d404e;
+  --code-bg: #272a37;
+  --accent: #7c3aed;
+  --accent-bg: rgba(124, 58, 237, 0.15);
+  --accent-border: rgba(124, 58, 237, 0.5);
   --sidebar-bg: #1a1b23;
-  --message-bg: #1f2028;
+  --message-bg: #272a37;
 }
 
 #root {
