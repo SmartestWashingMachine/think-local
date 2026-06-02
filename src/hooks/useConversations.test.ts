@@ -12,11 +12,26 @@ afterEach(() => {
 });
 
 describe('useConversations', () => {
-  it('starts with an empty list and no active conversation', () => {
+  it('starts with a default conversation when no data is stored', () => {
     const { result } = renderHook(() => useConversations());
-    expect(result.current.conversations).toEqual([]);
-    expect(result.current.activeId).toBeNull();
-    expect(result.current.activeConversation).toBeNull();
+    expect(result.current.conversations).toHaveLength(1);
+    expect(result.current.activeId).toBe(result.current.conversations[0].id);
+    expect(result.current.activeConversation).not.toBeNull();
+    expect(result.current.activeConversation?.title).toBe('New conversation');
+    expect(result.current.activeConversation?.messages).toEqual([]);
+  });
+
+  it('loads existing conversations from localStorage and does not auto-create', () => {
+    const existing = [
+      { id: 'existing-1', title: 'Saved Chat', messages: [], createdAt: 1000 },
+    ];
+    localStorage.setItem(STORAGE_KEYS.conversations, JSON.stringify(existing));
+    localStorage.setItem(STORAGE_KEYS.activeId, 'existing-1');
+
+    const { result } = renderHook(() => useConversations());
+    expect(result.current.conversations).toHaveLength(1);
+    expect(result.current.conversations[0].title).toBe('Saved Chat');
+    expect(result.current.activeId).toBe('existing-1');
   });
 
   it('creates a new conversation', () => {
@@ -26,7 +41,7 @@ describe('useConversations', () => {
       result.current.createConversation();
     });
 
-    expect(result.current.conversations).toHaveLength(1);
+    expect(result.current.conversations).toHaveLength(2);
     expect(result.current.activeId).toBe(result.current.conversations[0].id);
     expect(result.current.conversations[0].title).toBe('New conversation');
     expect(result.current.conversations[0].messages).toEqual([]);
@@ -65,12 +80,13 @@ describe('useConversations', () => {
       result.current.createConversation();
     });
     const id = result.current.conversations[0].id;
-    expect(result.current.conversations).toHaveLength(1);
+    expect(result.current.conversations).toHaveLength(2);
 
     act(() => {
       result.current.deleteConversation(id);
     });
-    expect(result.current.conversations).toHaveLength(0);
+    // The auto-created default conversation remains
+    expect(result.current.conversations).toHaveLength(1);
     expect(result.current.activeId).toBeNull();
   });
 
@@ -136,7 +152,7 @@ describe('useConversations', () => {
     const stored = JSON.parse(
       localStorage.getItem(STORAGE_KEYS.conversations) || '[]',
     );
-    expect(stored).toHaveLength(1);
+    expect(stored).toHaveLength(2);
     expect(stored[0].title).toBe('New conversation');
   });
 
@@ -176,7 +192,8 @@ describe('useConversations', () => {
       result.current.importConversations(imported);
     });
 
-    expect(result.current.conversations).toHaveLength(1);
+    // Auto-created default + imported
+    expect(result.current.conversations).toHaveLength(2);
     expect(result.current.conversations[0].title).toBe('Imported Chat');
   });
 
@@ -201,7 +218,8 @@ describe('useConversations', () => {
       result.current.importConversations(duplicates);
     });
 
-    expect(result.current.conversations).toHaveLength(1);
+    // Auto-created default + created conversation (duplicate not imported)
+    expect(result.current.conversations).toHaveLength(2);
   });
 
   it('exports all conversations', () => {
@@ -212,7 +230,8 @@ describe('useConversations', () => {
     });
 
     const exported = result.current.exportConversations();
-    expect(exported).toHaveLength(1);
+    // Auto-created default + created conversation
+    expect(exported).toHaveLength(2);
     expect(exported[0].title).toBe('New conversation');
   });
 });
