@@ -126,13 +126,19 @@
 .rag-view__details-chat-tag {
   display: inline-block;
   padding: 0.2rem 0.55rem;
-  background: var(--accent-bg);
-  color: var(--text-h);
-  border: 1px solid var(--accent);
+  background: rgba(147, 51, 234, 0.12);
+  color: #a855f7;
+  border: 1px solid rgba(147, 51, 234, 0.3);
   border-radius: 0.25rem;
   font-size: 0.78rem;
   line-height: 1.4;
   white-space: nowrap;
+}
+
+[data-theme='dark'] .rag-view__details-chat-tag {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border-color: rgba(168, 85, 247, 0.35);
 }
 
 .rag-view__details-empty {
