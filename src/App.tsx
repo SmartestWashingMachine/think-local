@@ -53,6 +53,7 @@ export default function App() {
       ) : (
         <Chat
           theme={theme}
+          view={view}
           onToggleTheme={toggleTheme}
           conversations={conversations}
           activeId={activeId}
@@ -64,6 +65,7 @@ export default function App() {
           onImportConversations={importConversations}
           onExportConversations={exportConversations}
           onOpenModelSelector={() => setModelSelectorOpen(true)}
+          onNavigate={setView}
           modelStatus={modelStatus}
         />
       )}

@@ -17,3 +17,22 @@ Object.defineProperty(window, 'matchMedia', {
 
 // Mock Element.prototype.scrollIntoView (not implemented in jsdom)
 Element.prototype.scrollIntoView = () => {};
+
+// Mock ResizeObserver (not implemented in jsdom)
+class ResizeObserverMock {
+  private callback: ResizeObserverCallback;
+  constructor(callback: ResizeObserverCallback) {
+    this.callback = callback;
+  }
+  observe(target: Element) {
+    // Trigger callback with default size so ForceGraph3D renders
+    this.callback(
+      [{ contentRect: { width: 800, height: 600 } as DOMRectReadOnly, target } as ResizeObserverEntry],
+      this as unknown as ResizeObserver,
+    );
+  }
+  unobserve() {}
+  disconnect() {}
+}
+
+window.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver;

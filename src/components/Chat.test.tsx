@@ -4,6 +4,10 @@ import { describe, expect, it, vi } from 'vitest';
 import Chat from './Chat';
 import type { Conversation } from '../types/chat';
 
+vi.mock('./RagView', () => ({
+  default: () => <div data-testid="rag-view">Mock RagView</div>,
+}));
+
 const mockConversation: Conversation = {
   id: '1',
   title: 'Test Chat',
@@ -14,6 +18,7 @@ const mockConversation: Conversation = {
 describe('Chat', () => {
   const defaultProps = {
     theme: 'light' as const,
+    view: 'chat' as const,
     onToggleTheme: vi.fn(),
     conversations: [mockConversation],
     activeId: '1',
@@ -25,6 +30,7 @@ describe('Chat', () => {
     onImportConversations: vi.fn(),
     onExportConversations: vi.fn(() => []),
     onOpenModelSelector: vi.fn(),
+    onNavigate: vi.fn(),
     modelStatus: 'idle',
   };
 
@@ -56,5 +62,17 @@ describe('Chat', () => {
     await user.click(screen.getByRole('button', { name: 'Send message' }));
 
     expect(onSendMessage).toHaveBeenCalledWith('Test message');
+  });
+
+  it('renders RagView when view is rag', () => {
+    render(<Chat {...defaultProps} view="rag" />);
+    expect(screen.getByTestId('rag-view')).toBeInTheDocument();
+  });
+
+  it('does not render message input when view is rag', () => {
+    render(<Chat {...defaultProps} view="rag" />);
+    expect(
+      screen.queryByPlaceholderText('Type your message…'),
+    ).not.toBeInTheDocument();
   });
 });

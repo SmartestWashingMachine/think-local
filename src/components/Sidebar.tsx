@@ -1,11 +1,12 @@
 import { useRef } from 'react';
-import type { Conversation } from '../types/chat';
+import type { Conversation, ViewState } from '../types/chat';
 import './Sidebar.css';
 
 interface SidebarProps {
   conversations: Conversation[];
   activeId: string | null;
   theme: 'light' | 'dark';
+  currentView: ViewState;
   onNewChat: () => void;
   onSelectConversation: (id: string) => void;
   onDeleteConversation: (id: string) => void;
@@ -13,6 +14,7 @@ interface SidebarProps {
   onExport: () => Conversation[];
   onToggleTheme: () => void;
   onOpenModelSelector: () => void;
+  onNavigate: (view: ViewState) => void;
   modelStatus: string;
 }
 
@@ -20,6 +22,7 @@ export default function Sidebar({
   conversations,
   activeId,
   theme,
+  currentView,
   onNewChat,
   onSelectConversation,
   onDeleteConversation,
@@ -27,6 +30,7 @@ export default function Sidebar({
   onExport,
   onToggleTheme,
   onOpenModelSelector,
+  onNavigate,
   modelStatus,
 }: SidebarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -75,6 +79,30 @@ export default function Sidebar({
     <aside className="sidebar">
       <div className="sidebar__header">
         <h2 className="sidebar__title">Secret Chatter</h2>
+      </div>
+
+      <div className="sidebar__pages">
+        <button
+          className={`sidebar__page-btn ${currentView === 'chat' ? 'sidebar__page-btn--active' : ''}`}
+          onClick={() => onNavigate('chat')}
+          type="button"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+          </svg>
+          Chats
+        </button>
+        <button
+          className={`sidebar__page-btn ${currentView === 'rag' ? 'sidebar__page-btn--active' : ''}`}
+          onClick={() => onNavigate('rag')}
+          type="button"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+          </svg>
+          RAG
+        </button>
       </div>
 
       <button className="sidebar__new-chat" onClick={onNewChat} type="button">

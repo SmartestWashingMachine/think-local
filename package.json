@@ -14,7 +14,8 @@
   "dependencies": {
     "@wllama/wllama": "^3.4.1",
     "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "react-dom": "^19.2.6",
+    "react-force-graph-3d": "^1.29.1"
   },
   "devDependencies": {
     "@babel/core": "^7.29.0",

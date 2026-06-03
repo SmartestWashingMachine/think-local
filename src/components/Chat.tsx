@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import type { Conversation } from '../types/chat';
+import type { Conversation, ViewState } from '../types/chat';
 import Sidebar from './Sidebar';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
+import RagView from './RagView';
 import './Chat.css';
 
 interface ChatProps {
   theme: 'light' | 'dark';
+  view: ViewState;
   onToggleTheme: () => void;
   conversations: Conversation[];
   activeId: string | null;
@@ -18,11 +20,13 @@ interface ChatProps {
   onImportConversations: (conversations: Conversation[]) => void;
   onExportConversations: () => Conversation[];
   onOpenModelSelector: () => void;
+  onNavigate: (view: ViewState) => void;
   modelStatus: string;
 }
 
 export default function Chat({
   theme,
+  view,
   onToggleTheme,
   conversations,
   activeId,
@@ -34,6 +38,7 @@ export default function Chat({
   onImportConversations,
   onExportConversations,
   onOpenModelSelector,
+  onNavigate,
   modelStatus,
 }: ChatProps) {
   const [sending, setSending] = useState(false);
@@ -53,6 +58,7 @@ export default function Chat({
         conversations={conversations}
         activeId={activeId}
         theme={theme}
+        currentView={view}
         onNewChat={onCreateConversation}
         onSelectConversation={onSwitchConversation}
         onDeleteConversation={onDeleteConversation}
@@ -60,10 +66,13 @@ export default function Chat({
         onExport={onExportConversations}
         onToggleTheme={onToggleTheme}
         onOpenModelSelector={onOpenModelSelector}
+        onNavigate={onNavigate}
         modelStatus={modelStatus}
       />
       <main className="chat__main">
-        {!activeConversation ? (
+        {view === 'rag' ? (
+          <RagView />
+        ) : !activeConversation ? (
           <div className="chat__empty">
             <p>Select a conversation or create a new one to start chatting.</p>
           </div>

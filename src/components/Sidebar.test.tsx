@@ -14,6 +14,7 @@ describe('Sidebar', () => {
     conversations: mockConversations,
     activeId: '1',
     theme: 'light' as const,
+    currentView: 'chat' as const,
     onNewChat: vi.fn(),
     onSelectConversation: vi.fn(),
     onDeleteConversation: vi.fn(),
@@ -21,6 +22,7 @@ describe('Sidebar', () => {
     onExport: vi.fn(() => []),
     onToggleTheme: vi.fn(),
     onOpenModelSelector: vi.fn(),
+    onNavigate: vi.fn(),
     modelStatus: 'idle',
   };
 
@@ -84,5 +86,33 @@ describe('Sidebar', () => {
     render(<Sidebar {...defaultProps} onToggleTheme={onToggleTheme} />);
     await userEvent.click(screen.getByText('Dark mode'));
     expect(onToggleTheme).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders Chats and RAG page buttons', () => {
+    render(<Sidebar {...defaultProps} />);
+    expect(screen.getByText('Chats')).toBeInTheDocument();
+    expect(screen.getByText('RAG')).toBeInTheDocument();
+  });
+
+  it('calls onNavigate with chat when Chats button is clicked', async () => {
+    const onNavigate = vi.fn();
+    render(<Sidebar {...defaultProps} onNavigate={onNavigate} />);
+    await userEvent.click(screen.getByText('Chats'));
+    expect(onNavigate).toHaveBeenCalledWith('chat');
+  });
+
+  it('calls onNavigate with rag when RAG button is clicked', async () => {
+    const onNavigate = vi.fn();
+    render(<Sidebar {...defaultProps} onNavigate={onNavigate} />);
+    await userEvent.click(screen.getByText('RAG'));
+    expect(onNavigate).toHaveBeenCalledWith('rag');
+  });
+
+  it('highlights active page button', () => {
+    const { rerender } = render(<Sidebar {...defaultProps} currentView="rag" />);
+    expect(screen.getByText('RAG').closest('button')).toHaveClass('sidebar__page-btn--active');
+
+    rerender(<Sidebar {...defaultProps} currentView="chat" />);
+    expect(screen.getByText('Chats').closest('button')).toHaveClass('sidebar__page-btn--active');
   });
 });
