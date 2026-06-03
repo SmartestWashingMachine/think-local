@@ -19,6 +19,7 @@ export default function RagView() {
   const containerRef = useRef<HTMLDivElement>(null);
   const fgRef = useRef<ForceGraphMethods<GraphNode, unknown>>(undefined as unknown as ForceGraphMethods<GraphNode, unknown>);
   const cameraDistRef = useRef(300);
+  const prevHighlightedRef = useRef(false);
 
   const debouncedSearch = useDebounce(searchQuery, 300);
 
@@ -46,6 +47,15 @@ export default function RagView() {
         .map((d) => d.id),
     );
   }, [debouncedSearch]);
+
+  useEffect(() => {
+    if (!fgRef.current) return;
+    const hasResults = highlightedIds.size > 0;
+    if (hasResults && !prevHighlightedRef.current) {
+      fgRef.current.zoomToFit(400, 80, (node) => highlightedIds.has(node.id as string));
+    }
+    prevHighlightedRef.current = hasResults;
+  }, [highlightedIds]);
 
   const graphData = useMemo(
     () => ({ nodes: DUMMY_DOCUMENTS as GraphNode[], links: DUMMY_LINKS }),
@@ -156,7 +166,7 @@ export default function RagView() {
                   <strong>Related chats</strong>
                   <div className="rag-view__details-chats-tags">
                     {selectedNode.relatedChats.map((chat, i) => (
-                      <span key={i} className="rag-view__details-chat-tag">{chat}</span>
+                      <button key={i} className="rag-view__details-chat-tag" onClick={() => setSearchQuery(chat)} type="button">{chat}</button>
                     ))}
                   </div>
                 </div>
