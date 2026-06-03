@@ -96,7 +96,10 @@ export function useConversations() {
   );
 
   const sendMessage = useCallback(
-    async (content: string, onResponse?: (messages: Message[]) => Promise<string>) => {
+    async (
+      content: string,
+      onStream?: (messages: Message[], onToken: (token: string) => void) => Promise<string>,
+    ) => {
       if (!activeId || !activeConversation) return;
 
       const userMessage: Message = {
@@ -122,32 +125,61 @@ export function useConversations() {
         }),
       );
 
-      let responseContent: string;
-
-      if (onResponse) {
-        try {
-          responseContent = await onResponse(messagesAfterUser);
-        } catch {
-          responseContent = DUMMY_RESPONSE;
-        }
-      } else {
-        await new Promise((r) => setTimeout(r, 1000));
-        responseContent = DUMMY_RESPONSE;
-      }
-
-      const assistantMessage: Message = {
-        id: generateId(),
-        role: 'assistant',
-        content: responseContent,
-        createdAt: Date.now(),
-      };
-
+      // Insert a placeholder assistant message for streaming
+      const assistantId = generateId();
       setConversations((prev) =>
         prev.map((c) => {
           if (c.id !== activeId) return c;
-          return { ...c, messages: [...c.messages, assistantMessage] };
+          return {
+            ...c,
+            messages: [...c.messages, { id: assistantId, role: 'assistant', content: '', createdAt: Date.now() }],
+          };
         }),
       );
+
+      if (onStream) {
+        try {
+          await onStream(messagesAfterUser, (token) => {
+            // Update the placeholder message content incrementally
+            setConversations((prev) =>
+              prev.map((c) => {
+                if (c.id !== activeId) return c;
+                return {
+                  ...c,
+                  messages: c.messages.map((m) =>
+                    m.id === assistantId ? { ...m, content: (m.content ?? '') + token } : m,
+                  ),
+                };
+              }),
+            );
+          });
+        } catch {
+          setConversations((prev) =>
+            prev.map((c) => {
+              if (c.id !== activeId) return c;
+              return {
+                ...c,
+                messages: c.messages.map((m) =>
+                  m.id === assistantId ? { ...m, content: DUMMY_RESPONSE } : m,
+                ),
+              };
+            }),
+          );
+        }
+      } else {
+        await new Promise((r) => setTimeout(r, 1000));
+        setConversations((prev) =>
+          prev.map((c) => {
+            if (c.id !== activeId) return c;
+            return {
+              ...c,
+              messages: c.messages.map((m) =>
+                m.id === assistantId ? { ...m, content: DUMMY_RESPONSE } : m,
+              ),
+            };
+          }),
+        );
+      }
     },
     [activeId, activeConversation],
   );

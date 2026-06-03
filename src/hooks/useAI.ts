@@ -90,22 +90,32 @@ export function useAI() {
     saveModelId(null);
   }, []);
 
-  const generateCompletion = useCallback(async (
+  const generateCompletionStream = useCallback(async (
     messages: { role: 'user' | 'assistant' | 'system'; content: string }[],
+    onToken: (token: string) => void,
   ): Promise<string> => {
     const wllama = wllamaRef.current;
     if (!wllama || !wllama.isModelLoaded()) {
       throw new Error('No model loaded');
     }
 
-    const response = await wllama.createChatCompletion({
+    let fullContent = '';
+
+    await wllama.createChatCompletion({
       messages,
       max_tokens: 256,
       temperature: 0.7,
-      stream: false,
+      stream: true,
+      onData: (chunk) => {
+        const delta = chunk.choices[0]?.delta?.content ?? '';
+        if (delta) {
+          fullContent += delta;
+          onToken(delta);
+        }
+      },
     });
 
-    return response.choices[0]?.message?.content ?? '';
+    return fullContent;
   }, []);
 
   const removeCachedModel = useCallback(async (url: string) => {
@@ -127,7 +137,7 @@ export function useAI() {
     cachedModels: cachedList,
     loadModel,
     unloadModel,
-    generateCompletion,
+    generateCompletionStream,
     removeCachedModel,
   };
 }

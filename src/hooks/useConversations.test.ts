@@ -235,22 +235,25 @@ describe('useConversations', () => {
     expect(exported[0].title).toBe('New conversation');
   });
 
-  it('uses onResponse callback when provided', async () => {
+  it('uses onStream callback when provided', async () => {
     const { result } = renderHook(() => useConversations());
 
     act(() => {
       result.current.createConversation();
     });
 
-    const onResponse = vi.fn(async (messages) => {
+    const onStream = vi.fn(async (messages, onToken) => {
       expect(messages).toHaveLength(1);
       expect(messages[0].role).toBe('user');
       expect(messages[0].content).toBe('Hello AI!');
+      onToken('Hello');
+      onToken(', human');
+      onToken('!');
       return 'Hello, human!';
     });
 
     await act(async () => {
-      await result.current.sendMessage('Hello AI!', onResponse);
+      await result.current.sendMessage('Hello AI!', onStream);
     });
 
     const conv = result.current.activeConversation!;
@@ -259,22 +262,22 @@ describe('useConversations', () => {
     expect(conv.messages[0].content).toBe('Hello AI!');
     expect(conv.messages[1].role).toBe('assistant');
     expect(conv.messages[1].content).toBe('Hello, human!');
-    expect(onResponse).toHaveBeenCalledTimes(1);
+    expect(onStream).toHaveBeenCalledTimes(1);
   });
 
-  it('falls back to dummy response when onResponse throws', async () => {
+  it('falls back to dummy response when onStream throws', async () => {
     const { result } = renderHook(() => useConversations());
 
     act(() => {
       result.current.createConversation();
     });
 
-    const onResponse = vi.fn(async () => {
+    const onStream = vi.fn(async () => {
       throw new Error('AI failed');
     });
 
     await act(async () => {
-      await result.current.sendMessage('Hello AI!', onResponse);
+      await result.current.sendMessage('Hello AI!', onStream);
     });
 
     const conv = result.current.activeConversation!;

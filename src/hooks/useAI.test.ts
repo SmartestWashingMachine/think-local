@@ -31,8 +31,17 @@ vi.mock('@wllama/wllama/esm/index.js', () => {
       this._loaded = false;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    async createChatCompletion(_options: Record<string, unknown>) {
+    async createChatCompletion(options: Record<string, unknown>) {
+      const stream = options.stream as boolean | undefined;
+      if (stream) {
+        const onData = options.onData as ((chunk: { choices: { delta: { content: string } }[] }) => void) | undefined;
+        if (onData) {
+          onData({ choices: [{ delta: { content: 'AI' } }] });
+          onData({ choices: [{ delta: { content: ' response' } }] });
+          onData({ choices: [{ delta: { content: ' text' } }] });
+        }
+        return;
+      }
       return {
         choices: [{ message: { content: 'AI response text' } }],
       };
@@ -101,14 +110,17 @@ describe('useAI', () => {
       await result.current.loadModel(RECOMMENDED_MODELS[0]);
     });
 
+    const tokens: string[] = [];
     let response = '';
     await act(async () => {
-      response = await result.current.generateCompletion([
-        { role: 'user', content: 'Hello' },
-      ]);
+      response = await result.current.generateCompletionStream(
+        [{ role: 'user', content: 'Hello' }],
+        (token) => { tokens.push(token); },
+      );
     });
 
     expect(response).toBe('AI response text');
+    expect(tokens).toEqual(['AI', ' response', ' text']);
   });
 
   it('persists the active model to localStorage after loading', async () => {
@@ -126,9 +138,10 @@ describe('useAI', () => {
     const { result } = renderHook(() => useAI());
 
     await expect(async () => {
-      await result.current.generateCompletion([
-        { role: 'user', content: 'Hello' },
-      ]);
+      await result.current.generateCompletionStream(
+        [{ role: 'user', content: 'Hello' }],
+        () => {},
+      );
     }).rejects.toThrow('No model loaded');
   });
 });

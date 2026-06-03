@@ -19,7 +19,7 @@ export default function App() {
     loadedModel,
     cachedModels,
     loadModel,
-    generateCompletion,
+    generateCompletionStream,
   } = useAI();
 
   const {
@@ -36,13 +36,14 @@ export default function App() {
 
   const handleSendMessage = useCallback(
     async (content: string) => {
-      await sendMessage(content, async (history: Message[]) => {
-        return generateCompletion(
+      await sendMessage(content, async (history: Message[], onToken) => {
+        return generateCompletionStream(
           history.map((m) => ({ role: m.role, content: m.content })),
+          onToken,
         );
       });
     },
-    [sendMessage, generateCompletion],
+    [sendMessage, generateCompletionStream],
   );
 
   return (
