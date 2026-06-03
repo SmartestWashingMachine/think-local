@@ -35,7 +35,20 @@ function saveActiveId(id: string | null) {
 }
 
 export function useConversations() {
-  const [conversations, setConversations] = useState<Conversation[]>(loadConversations);
+  const [conversations, setConversations] = useState<Conversation[]>(() => {
+    const loaded = loadConversations();
+    if (loaded.length > 0) return loaded;
+    const id = generateId();
+    const newConvo: Conversation = {
+      id,
+      title: 'New conversation',
+      messages: [],
+      createdAt: Date.now(),
+    };
+    saveConversations([newConvo]);
+    saveActiveId(id);
+    return [newConvo];
+  });
   const [activeId, setActiveId] = useState<string | null>(loadActiveId);
 
   // Persist whenever conversations change
@@ -47,23 +60,6 @@ export function useConversations() {
   useEffect(() => {
     saveActiveId(activeId);
   }, [activeId]);
-
-  // Auto-create a default conversation on first visit (empty localStorage)
-  useEffect(() => {
-    if (conversations.length === 0) {
-      const id = generateId();
-      const newConvo: Conversation = {
-        id,
-        title: 'New conversation',
-        messages: [],
-        createdAt: Date.now(),
-      };
-      setConversations([newConvo]);
-      setActiveId(id);
-    }
-    // Only run once on mount — no deps needed
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const activeConversation = useMemo(
     () => conversations.find((c) => c.id === activeId) ?? null,
