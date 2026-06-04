@@ -12,4 +12,4 @@ export interface Conversation {
   createdAt: number;
 }
 
-export type ViewState = 'landing' | 'chat' | 'rag';
+export type ViewState = 'landing' | 'chat' | 'rag' | 'agent-graph';

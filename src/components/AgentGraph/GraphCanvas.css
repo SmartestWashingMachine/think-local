@@ -1,0 +1,27 @@
+.graph-canvas {
+  flex: 1;
+  position: relative;
+  background: #111;
+}
+
+.graph-canvas__flow {
+  background: #111;
+}
+
+.graph-canvas__controls {
+  button {
+    background: #1e1e2e;
+    border-color: #333;
+    color: #ccc;
+    fill: #ccc;
+
+    &:hover {
+      background: #2a2a3e;
+    }
+  }
+}
+
+.graph-canvas__minimap {
+  border: 1px solid #333;
+  border-radius: 4px;
+}

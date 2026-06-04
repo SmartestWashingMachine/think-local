@@ -6,6 +6,7 @@ import Sidebar from './Sidebar';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import RagView from './RagView';
+import AgentGraphView from './AgentGraph/AgentGraphView';
 import './Chat.css';
 
 interface ChatProps {
@@ -93,7 +94,9 @@ export default function Chat({
         modelStatus={modelStatus}
       />
       <main className="chat__main">
-        {view === 'rag' ? (
+        {view === 'agent-graph' ? (
+          <AgentGraphView onBack={() => onNavigate('chat')} />
+        ) : view === 'rag' ? (
           <RagView
             documents={ragDocuments}
             embeddingModelStatus={embeddingModelStatus}
