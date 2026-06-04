@@ -19,6 +19,7 @@ interface ChatProps {
   onSwitchConversation: (id: string) => void;
   onDeleteConversation: (id: string) => void;
   onSendMessage: (content: string) => Promise<void>;
+  onAugmentWithRag?: (query: string) => Promise<string>;
   onImportConversations: (conversations: Conversation[]) => void;
   onExportConversations: () => Conversation[];
   onOpenModelSelector: () => void;
@@ -41,6 +42,7 @@ export default function Chat({
   onSwitchConversation,
   onDeleteConversation,
   onSendMessage,
+  onAugmentWithRag,
   onImportConversations,
   onExportConversations,
   onOpenModelSelector,
@@ -57,11 +59,16 @@ export default function Chat({
   async function handleSend(content: string) {
     setSending(true);
     try {
-      const finalContent = ragEnabled && activeConversation
-        ? (activeConversation.messages.length === 0
-          ? RAG_FIRST_MESSAGE_TEMPLATE(content)
-          : RAG_DEFAULT_TEMPLATE(content))
-        : content;
+      let finalContent = content;
+      if (ragEnabled && activeConversation) {
+        if (activeConversation.messages.length === 0 && onAugmentWithRag) {
+          finalContent = await onAugmentWithRag(content);
+        } else {
+          finalContent = activeConversation.messages.length === 0
+            ? RAG_FIRST_MESSAGE_TEMPLATE(content)
+            : RAG_DEFAULT_TEMPLATE(content);
+        }
+      }
       await onSendMessage(finalContent);
     } finally {
       setSending(false);

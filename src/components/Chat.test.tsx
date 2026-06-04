@@ -141,4 +141,61 @@ describe('Chat', () => {
 
     expect(onSendMessage).toHaveBeenCalledWith(RAG_DEFAULT_TEMPLATE('Tell me more'));
   });
+
+  it('calls onAugmentWithRag for first message when RAG is enabled', async () => {
+    const onSendMessage = vi.fn();
+    const onAugmentWithRag = vi.fn().mockResolvedValue('augmented response');
+    const user = userEvent.setup();
+
+    render(
+      <Chat
+        {...defaultProps}
+        onSendMessage={onSendMessage}
+        onAugmentWithRag={onAugmentWithRag}
+      />,
+    );
+
+    const ragButton = screen.getByTitle('RAG is disabled — click to enable');
+    await user.click(ragButton);
+
+    const textarea = screen.getByPlaceholderText('Type your message…');
+    await user.type(textarea, 'What is RAG?');
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(onAugmentWithRag).toHaveBeenCalledWith('What is RAG?');
+    expect(onSendMessage).toHaveBeenCalledWith('augmented response');
+  });
+
+  it('does not call onAugmentWithRag for subsequent messages', async () => {
+    const onSendMessage = vi.fn();
+    const onAugmentWithRag = vi.fn().mockResolvedValue('augmented');
+    const user = userEvent.setup();
+
+    const convoWithMessages: Conversation = {
+      ...mockConversation,
+      messages: [
+        { id: 'm1', role: 'user', content: 'Hi', createdAt: Date.now() },
+        { id: 'm2', role: 'assistant', content: 'Hello!', createdAt: Date.now() },
+      ],
+    };
+
+    render(
+      <Chat
+        {...defaultProps}
+        activeConversation={convoWithMessages}
+        onSendMessage={onSendMessage}
+        onAugmentWithRag={onAugmentWithRag}
+      />,
+    );
+
+    const ragButton = screen.getByTitle('RAG is disabled — click to enable');
+    await user.click(ragButton);
+
+    const textarea = screen.getByPlaceholderText('Type your message…');
+    await user.type(textarea, 'Tell me more');
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(onAugmentWithRag).not.toHaveBeenCalled();
+    expect(onSendMessage).toHaveBeenCalledWith(RAG_DEFAULT_TEMPLATE('Tell me more'));
+  });
 });

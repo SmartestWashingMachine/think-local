@@ -6,6 +6,7 @@ import { useAI } from './hooks/useAI';
 import { useEmbeddings } from './hooks/useEmbeddings';
 import { useVectorStore } from './hooks/useVectorStore';
 import type { Message } from './types/chat';
+import { RAG_DEFAULT_TOP_K, buildRagAugmentedMessage, RAG_FIRST_MESSAGE_TEMPLATE } from './constants/rag';
 import Landing from './components/Landing';
 import Chat from './components/Chat';
 import ModelSelector from './components/ModelSelector';
@@ -39,6 +40,7 @@ export default function App() {
   const {
     documents: ragDocuments,
     addDocuments: addRagDocuments,
+    searchDocuments,
   } = useVectorStore();
 
   const {
@@ -64,6 +66,18 @@ export default function App() {
     },
     [sendMessage, generateCompletionStream],
   );
+
+  const handleAugmentWithRag = useCallback(async (query: string): Promise<string> => {
+    try {
+      const embedding = await generateEmbedding(query);
+      const results = searchDocuments(embedding, RAG_DEFAULT_TOP_K);
+      if (results.length === 0) return RAG_FIRST_MESSAGE_TEMPLATE(query);
+      const context = results.map((r) => r.document.content).join('\n\n---\n\n');
+      return buildRagAugmentedMessage(query, context);
+    } catch {
+      return RAG_FIRST_MESSAGE_TEMPLATE(query);
+    }
+  }, [generateEmbedding, searchDocuments]);
 
   const handleEmbedDocuments = useCallback(async (
     files: File[],
@@ -96,6 +110,7 @@ export default function App() {
           onSwitchConversation={switchConversation}
           onDeleteConversation={deleteConversation}
           onSendMessage={handleSendMessage}
+          onAugmentWithRag={handleAugmentWithRag}
           onImportConversations={importConversations}
           onExportConversations={exportConversations}
           onOpenModelSelector={() => setModelSelectorOpen(true)}
