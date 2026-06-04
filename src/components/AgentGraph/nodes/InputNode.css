@@ -20,26 +20,6 @@
   text-align: center;
 }
 
-.input-node__body {
-  padding: 8px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.input-node__handle-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: relative;
-  min-height: 20px;
-}
-
-.input-node__handle-label {
-  font-size: 11px;
-  color: #888;
-}
-
 .input-node__label {
   white-space: nowrap;
 }
