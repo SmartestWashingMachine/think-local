@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import Chat from './Chat';
 import type { Conversation } from '../types/chat';
+import { RAG_FIRST_MESSAGE_TEMPLATE, RAG_DEFAULT_TEMPLATE } from '../constants/rag';
 
 vi.mock('./RagView', () => ({
   default: ({ documents }: { documents: unknown[] }) => (
@@ -80,5 +81,64 @@ describe('Chat', () => {
     expect(
       screen.queryByPlaceholderText('Type your message…'),
     ).not.toBeInTheDocument();
+  });
+
+  it('sends message without RAG template when RAG is disabled', async () => {
+    const onSendMessage = vi.fn();
+    const user = userEvent.setup();
+
+    render(<Chat {...defaultProps} onSendMessage={onSendMessage} />);
+
+    const textarea = screen.getByPlaceholderText('Type your message…');
+    await user.type(textarea, 'Hello');
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(onSendMessage).toHaveBeenCalledWith('Hello');
+  });
+
+  it('sends first message with RAG_FIRST_MESSAGE_TEMPLATE when RAG is enabled', async () => {
+    const onSendMessage = vi.fn();
+    const user = userEvent.setup();
+
+    render(<Chat {...defaultProps} onSendMessage={onSendMessage} />);
+
+    const ragButton = screen.getByTitle('RAG is disabled — click to enable');
+    await user.click(ragButton);
+
+    const textarea = screen.getByPlaceholderText('Type your message…');
+    await user.type(textarea, 'Hello');
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(onSendMessage).toHaveBeenCalledWith(RAG_FIRST_MESSAGE_TEMPLATE('Hello'));
+  });
+
+  it('sends subsequent messages with RAG_DEFAULT_TEMPLATE when RAG is enabled', async () => {
+    const onSendMessage = vi.fn();
+    const user = userEvent.setup();
+
+    const convoWithMessages: Conversation = {
+      ...mockConversation,
+      messages: [
+        { id: 'm1', role: 'user', content: 'Hi', createdAt: Date.now() },
+        { id: 'm2', role: 'assistant', content: 'Hello!', createdAt: Date.now() },
+      ],
+    };
+
+    render(
+      <Chat
+        {...defaultProps}
+        activeConversation={convoWithMessages}
+        onSendMessage={onSendMessage}
+      />,
+    );
+
+    const ragButton = screen.getByTitle('RAG is disabled — click to enable');
+    await user.click(ragButton);
+
+    const textarea = screen.getByPlaceholderText('Type your message…');
+    await user.type(textarea, 'Tell me more');
+    await user.click(screen.getByRole('button', { name: 'Send message' }));
+
+    expect(onSendMessage).toHaveBeenCalledWith(RAG_DEFAULT_TEMPLATE('Tell me more'));
   });
 });

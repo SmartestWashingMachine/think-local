@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Conversation, ViewState } from '../types/chat';
 import type { StoredDocument } from '../types/rag';
+import { RAG_FIRST_MESSAGE_TEMPLATE, RAG_DEFAULT_TEMPLATE } from '../constants/rag';
 import Sidebar from './Sidebar';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
@@ -51,11 +52,17 @@ export default function Chat({
   ragDocuments,
 }: ChatProps) {
   const [sending, setSending] = useState(false);
+  const [ragEnabled, setRagEnabled] = useState(false);
 
   async function handleSend(content: string) {
     setSending(true);
     try {
-      await onSendMessage(content);
+      const finalContent = ragEnabled && activeConversation
+        ? (activeConversation.messages.length === 0
+          ? RAG_FIRST_MESSAGE_TEMPLATE(content)
+          : RAG_DEFAULT_TEMPLATE(content))
+        : content;
+      await onSendMessage(finalContent);
     } finally {
       setSending(false);
     }
@@ -93,7 +100,7 @@ export default function Chat({
         ) : (
           <>
             <MessageList messages={activeConversation.messages} />
-            <MessageInput onSend={handleSend} disabled={sending} />
+            <MessageInput onSend={handleSend} disabled={sending} ragEnabled={ragEnabled} onToggleRag={() => setRagEnabled((v) => !v)} />
           </>
         )}
       </main>

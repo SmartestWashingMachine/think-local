@@ -49,4 +49,23 @@ describe('MessageInput', () => {
     expect(screen.getByPlaceholderText('Type your message…')).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled();
   });
+
+  it('renders RAG toggle button when onToggleRag is provided', () => {
+    render(<MessageInput onSend={() => {}} onToggleRag={() => {}} />);
+    expect(screen.getByText('RAG')).toBeInTheDocument();
+  });
+
+  it('calls onToggleRag when RAG button is clicked', async () => {
+    const onToggleRag = vi.fn();
+    const user = userEvent.setup();
+    render(<MessageInput onSend={() => {}} onToggleRag={onToggleRag} />);
+
+    await user.click(screen.getByText('RAG'));
+    expect(onToggleRag).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not render RAG toggle when onToggleRag is not provided', () => {
+    render(<MessageInput onSend={() => {}} />);
+    expect(screen.queryByText('RAG')).not.toBeInTheDocument();
+  });
 });
