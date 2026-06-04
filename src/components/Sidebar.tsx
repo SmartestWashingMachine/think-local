@@ -14,8 +14,11 @@ interface SidebarProps {
   onExport: () => Conversation[];
   onToggleTheme: () => void;
   onOpenModelSelector: () => void;
+  onOpenEmbeddingModelSelector: () => void;
+  onOpenAddDocuments: () => void;
   onNavigate: (view: ViewState) => void;
   modelStatus: string;
+  embeddingModelStatus: string;
 }
 
 export default function Sidebar({
@@ -30,8 +33,11 @@ export default function Sidebar({
   onExport,
   onToggleTheme,
   onOpenModelSelector,
+  onOpenEmbeddingModelSelector,
+  onOpenAddDocuments,
   onNavigate,
   modelStatus,
+  embeddingModelStatus,
 }: SidebarProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -56,7 +62,6 @@ export default function Sidebar({
       }
     };
     reader.readAsText(file);
-    // Reset so the same file can be re-imported
     e.target.value = '';
   }
 
@@ -202,6 +207,26 @@ export default function Sidebar({
           )}
           <span>{theme === 'light' ? 'Dark mode' : 'Light mode'}</span>
         </button>
+
+        <div className="sidebar__rag-section">
+          <button className="sidebar__embd-btn" onClick={onOpenEmbeddingModelSelector} type="button" title="Embedding model">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </svg>
+            <span>Embedding Model</span>
+            {embeddingModelStatus === 'loaded' && <span className="sidebar__model-dot sidebar__model-dot--loaded" />}
+            {(embeddingModelStatus === 'downloading' || embeddingModelStatus === 'loading') && <span className="sidebar__model-dot sidebar__model-dot--busy" />}
+          </button>
+          <button className="sidebar__add-docs-btn" onClick={onOpenAddDocuments} type="button" title="Add documents">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="12" y1="18" x2="12" y2="12" />
+              <line x1="9" y1="15" x2="15" y2="15" />
+            </svg>
+            Add documents
+          </button>
+        </div>
       </div>
     </aside>
   );

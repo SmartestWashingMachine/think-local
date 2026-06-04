@@ -13,7 +13,21 @@ export const RECOMMENDED_MODELS: ModelInfo[] = [
   },
 ];
 
+export const RECOMMENDED_EMBEDDING_MODELS: ModelInfo[] = [
+  {
+    repo: 'CompendiumLabs/bge-base-en-v1.5-gguf',
+    file: 'bge-base-en-v1.5-q4_k_m.gguf',
+    label: 'BGE Base v1.5 (Q4_K_M, ~133MB)',
+  },
+  {
+    repo: 'ggml-org/models',
+    file: 'bert-bge-small/ggml-model-f16.gguf',
+    label: 'BERT BGE Small (F16, ~67MB)',
+  },
+];
+
 export const STORAGE_KEY_MODEL = 'secret-chatter-active-model';
+export const STORAGE_KEY_EMBEDDING_MODEL = 'secret-chatter-embedding-model';
 
 export function parseModelId(id: string): { repo: string; file: string } | null {
   const parts = id.split('/');
@@ -42,6 +56,26 @@ export function saveModelId(id: string | null): void {
       localStorage.setItem(STORAGE_KEY_MODEL, id);
     } else {
       localStorage.removeItem(STORAGE_KEY_MODEL);
+    }
+  } catch {
+    // ignore
+  }
+}
+
+export function getSavedEmbeddingModelId(): string | null {
+  try {
+    return localStorage.getItem(STORAGE_KEY_EMBEDDING_MODEL);
+  } catch {
+    return null;
+  }
+}
+
+export function saveEmbeddingModelId(id: string | null): void {
+  try {
+    if (id) {
+      localStorage.setItem(STORAGE_KEY_EMBEDDING_MODEL, id);
+    } else {
+      localStorage.removeItem(STORAGE_KEY_EMBEDDING_MODEL);
     }
   } catch {
     // ignore

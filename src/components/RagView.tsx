@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import ForceGraph3D from 'react-force-graph-3d';
 import type { ForceGraphMethods } from 'react-force-graph-3d';
-import type { RagDocument } from '../types/rag';
+import type { RagDocument, StoredDocument } from '../types/rag';
 import { DUMMY_DOCUMENTS, DUMMY_LINKS } from '../types/rag';
 import { useDebounce } from '../hooks/useDebounce';
 import './RagView.css';
@@ -12,8 +12,13 @@ interface GraphNode extends RagDocument {
   z?: number;
 }
 
-export default function RagView() {
+interface RagViewProps {
+  documents: StoredDocument[];
+}
+
+export default function RagView({ documents }: RagViewProps) {
   const [selectedNode, setSelectedNode] = useState<RagDocument | null>(null);
+  const [selectedDoc, setSelectedDoc] = useState<StoredDocument | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [graphSize, setGraphSize] = useState({ width: 0, height: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
@@ -38,7 +43,15 @@ export default function RagView() {
     return () => observer.disconnect();
   }, []);
 
-  const highlightedIds = useMemo(() => {
+  const filteredDocs = useMemo(() => {
+    if (!debouncedSearch) return documents;
+    const q = debouncedSearch.toLowerCase();
+    return documents.filter(
+      (d) => d.filename.toLowerCase().includes(q) || d.content.toLowerCase().includes(q),
+    );
+  }, [documents, debouncedSearch]);
+
+  const dummyHighlightedIds = useMemo(() => {
     if (!debouncedSearch) return new Set<string>();
     const q = debouncedSearch.toLowerCase();
     return new Set(
@@ -50,12 +63,12 @@ export default function RagView() {
 
   useEffect(() => {
     if (!fgRef.current) return;
-    const hasResults = highlightedIds.size > 0;
+    const hasResults = dummyHighlightedIds.size > 0;
     if (hasResults && !prevHighlightedRef.current) {
-      fgRef.current.zoomToFit(400, 80, (node) => highlightedIds.has(node.id as string));
+      fgRef.current.zoomToFit(400, 80, (node) => dummyHighlightedIds.has(node.id as string));
     }
     prevHighlightedRef.current = hasResults;
-  }, [highlightedIds]);
+  }, [dummyHighlightedIds]);
 
   const graphData = useMemo(
     () => ({ nodes: DUMMY_DOCUMENTS as GraphNode[], links: DUMMY_LINKS }),
@@ -64,6 +77,7 @@ export default function RagView() {
 
   const handleNodeClick = useCallback((node: GraphNode) => {
     setSelectedNode(node);
+    setSelectedDoc(null);
     if (fgRef.current && node.x !== undefined && node.y !== undefined && node.z !== undefined) {
       fgRef.current.cameraPosition(
         { x: node.x, y: node.y, z: node.z + 250 },
@@ -71,6 +85,11 @@ export default function RagView() {
         600,
       );
     }
+  }, []);
+
+  const handleDocClick = useCallback((doc: StoredDocument) => {
+    setSelectedDoc(doc);
+    setSelectedNode(null);
   }, []);
 
   const handleZoomIn = useCallback(() => {
@@ -94,10 +113,10 @@ export default function RagView() {
   const nodeColor = useCallback(
     (node: GraphNode) => {
       if (selectedNode && node.id === selectedNode.id) return '#ff6b6b';
-      if (highlightedIds.size > 0 && !highlightedIds.has(node.id)) return '#444';
+      if (dummyHighlightedIds.size > 0 && !dummyHighlightedIds.has(node.id)) return '#444';
       return '#4fc3f7';
     },
-    [selectedNode, highlightedIds],
+    [selectedNode, dummyHighlightedIds],
   );
 
   const nodeLabel = useCallback((node: GraphNode) => {
@@ -141,55 +160,91 @@ export default function RagView() {
       </div>
 
       <aside className="rag-view__info">
-        <div className="rag-view__search">
-          <input
-            type="text"
-            placeholder="Search documents…"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
+        {documents.length > 0 ? (
+          <>
+            <div className="rag-view__search">
+              <input
+                type="text"
+                placeholder="Search documents…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
 
-        <div className="rag-view__details">
-          {selectedNode ? (
-            <>
-              <h3 className="rag-view__details-title">{selectedNode.title}</h3>
-              <div className="rag-view__details-meta">
-                <span>Added: {new Date(selectedNode.dateAdded).toLocaleDateString()}</span>
-                <span>Queried: {selectedNode.queryCount} times</span>
-              </div>
-              <div className="rag-view__details-content">
-                <p>{selectedNode.content}</p>
-              </div>
-              {selectedNode.relatedChats.length > 0 && (
-                <div className="rag-view__details-chats">
-                  <strong>Related chats</strong>
-                  <div className="rag-view__details-chats-tags">
-                    {selectedNode.relatedChats.map((chat, i) => (
-                      <button key={i} className="rag-view__details-chat-tag" onClick={() => setSearchQuery(chat)} type="button">{chat}</button>
-                    ))}
+            <div className="rag-view__details">
+              {selectedDoc ? (
+                <>
+                  <h3 className="rag-view__details-title">{selectedDoc.filename}</h3>
+                  <div className="rag-view__details-meta">
+                    <span>Added: {new Date(selectedDoc.dateAdded).toLocaleDateString()}</span>
                   </div>
+                  <div className="rag-view__details-content">
+                    <p>{selectedDoc.content}</p>
+                  </div>
+                </>
+              ) : selectedNode ? (
+                <>
+                  <h3 className="rag-view__details-title">{selectedNode.title}</h3>
+                  <div className="rag-view__details-meta">
+                    <span>Added: {new Date(selectedNode.dateAdded).toLocaleDateString()}</span>
+                    <span>Queried: {selectedNode.queryCount} times</span>
+                  </div>
+                  <div className="rag-view__details-content">
+                    <p>{selectedNode.content}</p>
+                  </div>
+                  {selectedNode.relatedChats.length > 0 && (
+                    <div className="rag-view__details-chats">
+                      <strong>Related chats</strong>
+                      <div className="rag-view__details-chats-tags">
+                        {selectedNode.relatedChats.map((chat, i) => (
+                          <button key={i} className="rag-view__details-chat-tag" onClick={() => setSearchQuery(chat)} type="button">{chat}</button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="rag-view__details-empty">Select a document to view details</p>
+              )}
+
+              {filteredDocs.length > 0 && (
+                <div className="rag-view__doc-list">
+                  <strong className="rag-view__doc-list-header">Documents ({filteredDocs.length})</strong>
+                  {filteredDocs.map((doc) => (
+                    <button
+                      key={doc.id}
+                      className={`rag-view__doc-item ${selectedDoc?.id === doc.id ? 'rag-view__doc-item--active' : ''}`}
+                      onClick={() => handleDocClick(doc)}
+                      type="button"
+                    >
+                      <span className="rag-view__doc-item-name">{doc.filename}</span>
+                      <span className="rag-view__doc-item-date">{new Date(doc.dateAdded).toLocaleDateString()}</span>
+                    </button>
+                  ))}
                 </div>
               )}
-            </>
-          ) : (
-            <p className="rag-view__details-empty">Click a node to view details</p>
-          )}
-        </div>
+            </div>
 
-        <div className="rag-view__input">
-          <input
-            type="text"
-            placeholder="Query embeddings (stub)…"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleStubQuery((e.target as HTMLInputElement).value);
-                (e.target as HTMLInputElement).value = '';
-              }
-            }}
-          />
-        </div>
+            <div className="rag-view__input">
+              <input
+                type="text"
+                placeholder="Query embeddings (stub)…"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleStubQuery((e.target as HTMLInputElement).value);
+                    (e.target as HTMLInputElement).value = '';
+                  }
+                }}
+              />
+            </div>
+          </>
+        ) : (
+          <div className="rag-view__empty">
+            <p className="rag-view__details-empty">No documents yet.</p>
+            <p className="rag-view__details-empty">Add documents using the sidebar button.</p>
+          </div>
+        )}
       </aside>
     </div>
   );

@@ -5,7 +5,9 @@ import Chat from './Chat';
 import type { Conversation } from '../types/chat';
 
 vi.mock('./RagView', () => ({
-  default: () => <div data-testid="rag-view">Mock RagView</div>,
+  default: ({ documents }: { documents: unknown[] }) => (
+    <div data-testid="rag-view">Mock RagView (docs: {documents.length})</div>
+  ),
 }));
 
 const mockConversation: Conversation = {
@@ -30,8 +32,12 @@ describe('Chat', () => {
     onImportConversations: vi.fn(),
     onExportConversations: vi.fn(() => []),
     onOpenModelSelector: vi.fn(),
+    onOpenEmbeddingModelSelector: vi.fn(),
+    onOpenAddDocuments: vi.fn(),
     onNavigate: vi.fn(),
     modelStatus: 'idle',
+    embeddingModelStatus: 'idle',
+    ragDocuments: [],
   };
 
   it('renders sidebar and message area', () => {

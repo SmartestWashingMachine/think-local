@@ -17,6 +17,18 @@ export interface RagGraphData {
   links: RagLink[];
 }
 
+export interface StoredDocument {
+  id: string;
+  filename: string;
+  content: string;
+  dateAdded: number;
+}
+
+export interface SearchResult {
+  document: StoredDocument;
+  score: number;
+}
+
 export const DUMMY_DOCUMENTS: RagDocument[] = [
   {
     id: 'doc-1',

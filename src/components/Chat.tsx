@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Conversation, ViewState } from '../types/chat';
+import type { StoredDocument } from '../types/rag';
 import Sidebar from './Sidebar';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
@@ -20,8 +21,12 @@ interface ChatProps {
   onImportConversations: (conversations: Conversation[]) => void;
   onExportConversations: () => Conversation[];
   onOpenModelSelector: () => void;
+  onOpenEmbeddingModelSelector: () => void;
+  onOpenAddDocuments: () => void;
   onNavigate: (view: ViewState) => void;
   modelStatus: string;
+  embeddingModelStatus: string;
+  ragDocuments: StoredDocument[];
 }
 
 export default function Chat({
@@ -38,8 +43,12 @@ export default function Chat({
   onImportConversations,
   onExportConversations,
   onOpenModelSelector,
+  onOpenEmbeddingModelSelector,
+  onOpenAddDocuments,
   onNavigate,
   modelStatus,
+  embeddingModelStatus,
+  ragDocuments,
 }: ChatProps) {
   const [sending, setSending] = useState(false);
 
@@ -66,12 +75,15 @@ export default function Chat({
         onExport={onExportConversations}
         onToggleTheme={onToggleTheme}
         onOpenModelSelector={onOpenModelSelector}
+        onOpenEmbeddingModelSelector={onOpenEmbeddingModelSelector}
+        onOpenAddDocuments={onOpenAddDocuments}
         onNavigate={onNavigate}
         modelStatus={modelStatus}
+        embeddingModelStatus={embeddingModelStatus}
       />
       <main className="chat__main">
         {view === 'rag' ? (
-          <RagView />
+          <RagView documents={ragDocuments} />
         ) : !activeConversation ? (
           <div className="chat__empty">
             <p>Select a conversation or create a new one to start chatting.</p>

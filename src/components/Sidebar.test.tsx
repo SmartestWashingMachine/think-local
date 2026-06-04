@@ -22,8 +22,11 @@ describe('Sidebar', () => {
     onExport: vi.fn(() => []),
     onToggleTheme: vi.fn(),
     onOpenModelSelector: vi.fn(),
+    onOpenEmbeddingModelSelector: vi.fn(),
+    onOpenAddDocuments: vi.fn(),
     onNavigate: vi.fn(),
     modelStatus: 'idle',
+    embeddingModelStatus: 'idle',
   };
 
   it('renders the app title', () => {
@@ -114,5 +117,25 @@ describe('Sidebar', () => {
 
     rerender(<Sidebar {...defaultProps} currentView="chat" />);
     expect(screen.getByText('Chats').closest('button')).toHaveClass('sidebar__page-btn--active');
+  });
+
+  it('renders Embedding Model and Add documents buttons', () => {
+    render(<Sidebar {...defaultProps} />);
+    expect(screen.getByText('Embedding Model')).toBeInTheDocument();
+    expect(screen.getByText('Add documents')).toBeInTheDocument();
+  });
+
+  it('calls onOpenEmbeddingModelSelector when Embedding Model button is clicked', async () => {
+    const onOpenEmbeddingModelSelector = vi.fn();
+    render(<Sidebar {...defaultProps} onOpenEmbeddingModelSelector={onOpenEmbeddingModelSelector} />);
+    await userEvent.click(screen.getByText('Embedding Model'));
+    expect(onOpenEmbeddingModelSelector).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onOpenAddDocuments when Add documents button is clicked', async () => {
+    const onOpenAddDocuments = vi.fn();
+    render(<Sidebar {...defaultProps} onOpenAddDocuments={onOpenAddDocuments} />);
+    await userEvent.click(screen.getByText('Add documents'));
+    expect(onOpenAddDocuments).toHaveBeenCalledTimes(1);
   });
 });
