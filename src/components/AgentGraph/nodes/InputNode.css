@@ -1,5 +1,5 @@
 .input-node {
-  background: var(--bg-card, #1e1e2e);
+  background: #1e1e2e;
   border: 2px solid transparent;
   border-radius: 8px;
   min-width: 140px;
@@ -9,7 +9,7 @@
 }
 
 .input-node--selected {
-  border-color: var(--accent, #4fc3f7);
+  border-color: #4fc3f7;
 }
 
 .input-node__header {
@@ -20,6 +20,26 @@
   text-align: center;
 }
 
+.input-node__body {
+  padding: 8px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input-node__handle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  min-height: 20px;
+}
+
+.input-node__handle-label {
+  font-size: 11px;
+  color: #888;
+}
+
 .input-node__label {
   white-space: nowrap;
 }
@@ -28,5 +48,5 @@
   width: 10px !important;
   height: 10px !important;
   border: 2px solid #fff !important;
-  background: var(--accent, #4fc3f7) !important;
+  background: #4fc3f7 !important;
 }

@@ -6,6 +6,7 @@ import {
   type Node,
   type Edge,
   type Connection,
+  type NodeChange,
 } from '@xyflow/react';
 import type { AgentNodeType } from '../../types/agentGraph';
 import { AGENT_NODE_DEFINITIONS } from '../../types/agentGraph';
@@ -24,6 +25,7 @@ function createNode(type: AgentNodeType, position: { x: number; y: number }, id?
 }
 
 const INITIAL_NODE = createNode('user-query', { x: 100, y: 200 });
+const USER_QUERY_NODE_ID = INITIAL_NODE.id;
 
 type RightPaneTab = 'info' | 'add';
 
@@ -33,6 +35,19 @@ interface AgentGraphViewProps {
 
 export default function AgentGraphView({ onBack }: AgentGraphViewProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState([INITIAL_NODE]);
+
+  const handleNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      const filtered = changes.filter((change) => {
+        if (change.type === 'remove' && change.id === USER_QUERY_NODE_ID) {
+          return false;
+        }
+        return true;
+      });
+      onNodesChange(filtered);
+    },
+    [onNodesChange],
+  );
   const initialEdges: Edge[] = [];
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
@@ -104,7 +119,7 @@ export default function AgentGraphView({ onBack }: AgentGraphViewProps) {
         <GraphCanvas
           nodes={nodes}
           edges={edges}
-          onNodesChange={onNodesChange}
+          onNodesChange={handleNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodeClick={onNodeClick}

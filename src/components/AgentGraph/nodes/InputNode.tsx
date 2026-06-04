@@ -12,15 +12,19 @@ export default function InputNode({ data, selected }: NodeProps) {
       <div className="input-node__header" style={{ backgroundColor: def.color }}>
         <span className="input-node__label">{nodeData.label}</span>
       </div>
-      {def.handles.map((h) => (
-        <Handle
-          key={h.id}
-          type={h.type}
-          position={Position[h.position.toUpperCase() as keyof typeof Position]}
-          id={h.id}
-          className="input-node__handle"
-        />
-      ))}
+      <div className="input-node__body">
+        {def.handles.map((h) => (
+          <div key={h.id} className="input-node__handle-row">
+            <Handle
+              type={h.type}
+              position={Position[h.position.toUpperCase() as keyof typeof Position]}
+              id={h.id}
+              className="input-node__handle"
+            />
+            <span className="input-node__handle-label">{h.label}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
