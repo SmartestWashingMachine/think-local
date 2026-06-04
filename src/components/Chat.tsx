@@ -75,15 +75,17 @@ export default function Chat({
         onExport={onExportConversations}
         onToggleTheme={onToggleTheme}
         onOpenModelSelector={onOpenModelSelector}
-        onOpenEmbeddingModelSelector={onOpenEmbeddingModelSelector}
-        onOpenAddDocuments={onOpenAddDocuments}
         onNavigate={onNavigate}
         modelStatus={modelStatus}
-        embeddingModelStatus={embeddingModelStatus}
       />
       <main className="chat__main">
         {view === 'rag' ? (
-          <RagView documents={ragDocuments} />
+          <RagView
+            documents={ragDocuments}
+            embeddingModelStatus={embeddingModelStatus}
+            onOpenEmbeddingModelSelector={onOpenEmbeddingModelSelector}
+            onOpenAddDocuments={onOpenAddDocuments}
+          />
         ) : !activeConversation ? (
           <div className="chat__empty">
             <p>Select a conversation or create a new one to start chatting.</p>
