@@ -20,7 +20,7 @@ function createNode(type: AgentNodeType, position: { x: number; y: number }, id?
     id: id ?? crypto.randomUUID(),
     type: def.category,
     position,
-    data: { nodeType: type, label: def.label },
+    data: { nodeType: type, label: def.label, ...def.defaults },
   } as unknown as Node;
 }
 
@@ -78,17 +78,17 @@ export default function AgentGraphView({ onBack }: AgentGraphViewProps) {
     [nodes, setEdges],
   );
 
-  const onNodeClick = useCallback(
-    (_event: React.MouseEvent, node: Node) => {
-      setSelectedNode(node);
-      setRightPaneTab('info');
+  const onSelectionChange = useCallback(
+    ({ nodes: selectedNodes }: { nodes: Node[]; edges: Edge[] }) => {
+      if (selectedNodes.length > 0) {
+        setSelectedNode(selectedNodes[0]);
+        setRightPaneTab('info');
+      } else {
+        setSelectedNode(null);
+      }
     },
     [],
   );
-
-  const handleCanvasClick = useCallback(() => {
-    setSelectedNode(null);
-  }, []);
 
   const onAddNode = useCallback(
     (type: AgentNodeType) => {
@@ -106,6 +106,19 @@ export default function AgentGraphView({ onBack }: AgentGraphViewProps) {
     (type: AgentNodeType, position: { x: number; y: number }) => {
       const newNode = createNode(type, position);
       setNodes((nds) => [...nds, newNode]);
+    },
+    [setNodes],
+  );
+
+  const handleUpdateNodeData = useCallback(
+    (nodeId: string, newData: Partial<AgentNodeData>) => {
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === nodeId
+            ? { ...n, data: { ...n.data, ...newData } }
+            : n,
+        ),
+      );
     },
     [setNodes],
   );
@@ -133,14 +146,14 @@ export default function AgentGraphView({ onBack }: AgentGraphViewProps) {
           </span>
         </div>
       </header>
-      <div className="agent-graph-view__body" onClick={handleCanvasClick}>
+      <div className="agent-graph-view__body">
         <GraphCanvas
           nodes={nodes}
           edges={edges}
           onNodesChange={handleNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
-          onNodeClick={onNodeClick}
+          onSelectionChange={onSelectionChange}
           onAddNode={onAddNodeAtPosition}
         />
         <RightPane
@@ -148,6 +161,7 @@ export default function AgentGraphView({ onBack }: AgentGraphViewProps) {
           activeTab={rightPaneTab}
           onTabChange={setRightPaneTab}
           onAddNode={onAddNode}
+          onUpdateNodeData={handleUpdateNodeData}
         />
       </div>
     </div>

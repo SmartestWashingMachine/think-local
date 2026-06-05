@@ -19,6 +19,39 @@ export interface HandleConfig {
   valueType: ValueType;
 }
 
+interface BasePropertyDefinition {
+  key: string;
+  label: string;
+  description?: string;
+}
+
+interface TextPropertyDefinition extends BasePropertyDefinition {
+  type: 'text';
+  placeholder?: string;
+}
+
+interface NumberPropertyDefinition extends BasePropertyDefinition {
+  type: 'number';
+  min?: number;
+  max?: number;
+  step?: number;
+}
+
+interface BooleanPropertyDefinition extends BasePropertyDefinition {
+  type: 'boolean';
+}
+
+interface SelectPropertyDefinition extends BasePropertyDefinition {
+  type: 'select';
+  options: { label: string; value: string }[];
+}
+
+export type PropertyDefinition =
+  | TextPropertyDefinition
+  | NumberPropertyDefinition
+  | BooleanPropertyDefinition
+  | SelectPropertyDefinition;
+
 export interface AgentNodeData {
   nodeType: AgentNodeType;
   label: string;
@@ -32,6 +65,8 @@ export interface AgentNodeDefinition {
   color: string;
   description: string;
   handles: HandleConfig[];
+  properties: PropertyDefinition[];
+  defaults: Record<string, unknown>;
 }
 
 export const AGENT_NODE_DEFINITIONS: Record<AgentNodeType, AgentNodeDefinition> = {
@@ -44,6 +79,8 @@ export const AGENT_NODE_DEFINITIONS: Record<AgentNodeType, AgentNodeDefinition> 
     handles: [
       { id: 'output', label: 'Query', type: 'source', position: 'bottom', valueType: 'string' },
     ],
+    properties: [],
+    defaults: {},
   },
   llm: {
     type: 'llm',
@@ -55,6 +92,8 @@ export const AGENT_NODE_DEFINITIONS: Record<AgentNodeType, AgentNodeDefinition> 
       { id: 'input', label: 'Input', type: 'target', position: 'top', valueType: 'string' },
       { id: 'output', label: 'Output', type: 'source', position: 'bottom', valueType: 'string' },
     ],
+    properties: [],
+    defaults: {},
   },
   rag: {
     type: 'rag',
@@ -66,6 +105,11 @@ export const AGENT_NODE_DEFINITIONS: Record<AgentNodeType, AgentNodeDefinition> 
       { id: 'input', label: 'Query', type: 'target', position: 'top', valueType: 'string' },
       { id: 'output', label: 'Chunks', type: 'source', position: 'bottom', valueType: 'list<string>' },
     ],
+    properties: [
+      { key: 'database', label: 'Database', type: 'select', options: [{ label: 'Default', value: 'default' }], description: 'Which knowledge base to search' },
+      { key: 'k', label: 'K', type: 'number', min: 1, max: 50, step: 1, description: 'Number of documents to return' },
+    ],
+    defaults: { database: 'default', k: 3 },
   },
   'string-joiner': {
     type: 'string-joiner',
@@ -77,6 +121,10 @@ export const AGENT_NODE_DEFINITIONS: Record<AgentNodeType, AgentNodeDefinition> 
       { id: 'input', label: 'Strings', type: 'target', position: 'top', valueType: 'list<string>' },
       { id: 'output', label: 'Output', type: 'source', position: 'bottom', valueType: 'string' },
     ],
+    properties: [
+      { key: 'joinString', label: 'Join String', type: 'text', placeholder: '\\n', description: 'The string to join each item with' },
+    ],
+    defaults: { joinString: '\n' },
   },
   'if-string-contains': {
     type: 'if-string-contains',
@@ -88,6 +136,11 @@ export const AGENT_NODE_DEFINITIONS: Record<AgentNodeType, AgentNodeDefinition> 
       { id: 'input', label: 'Input', type: 'target', position: 'top', valueType: 'string' },
       { id: 'output', label: 'Output', type: 'source', position: 'bottom', valueType: 'string' },
     ],
+    properties: [
+      { key: 'containsString', label: 'Contains String', type: 'text', placeholder: 'substring', description: 'Does input contain this string?' },
+      { key: 'caseSensitive', label: 'Case Sensitive', type: 'boolean', description: 'Whether the check is case-sensitive' },
+    ],
+    defaults: { containsString: '', caseSensitive: true },
   },
   'if-closest-document': {
     type: 'if-closest-document',
@@ -99,6 +152,10 @@ export const AGENT_NODE_DEFINITIONS: Record<AgentNodeType, AgentNodeDefinition> 
       { id: 'input', label: 'Query', type: 'target', position: 'top', valueType: 'string' },
       { id: 'output', label: 'Output', type: 'source', position: 'bottom', valueType: 'string' },
     ],
+    properties: [
+      { key: 'threshold', label: 'Threshold', type: 'number', min: 0, max: 1, step: 0.05, description: 'Similarity threshold for matching' },
+    ],
+    defaults: { threshold: 0.7 },
   },
   'chat-message': {
     type: 'chat-message',
@@ -109,6 +166,8 @@ export const AGENT_NODE_DEFINITIONS: Record<AgentNodeType, AgentNodeDefinition> 
     handles: [
       { id: 'input', label: 'Input', type: 'target', position: 'top', valueType: 'string' },
     ],
+    properties: [],
+    defaults: {},
   },
 };
 

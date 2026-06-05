@@ -11,6 +11,7 @@ import {
   type OnNodesChange,
   type OnEdgesChange,
   type OnConnect,
+  type OnSelectionChangeFunc,
   type NodeTypes,
   type Connection,
 } from '@xyflow/react';
@@ -36,7 +37,7 @@ interface GraphCanvasInnerProps {
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
   onConnect: OnConnect;
-  onNodeClick: (_event: React.MouseEvent, node: Node) => void;
+  onSelectionChange: OnSelectionChangeFunc;
   onAddNode: (type: AgentNodeType, position: { x: number; y: number }) => void;
 }
 
@@ -46,7 +47,7 @@ function GraphCanvasInner({
   onNodesChange,
   onEdgesChange,
   onConnect,
-  onNodeClick,
+  onSelectionChange,
   onAddNode,
 }: GraphCanvasInnerProps) {
   const reactFlowInstance = useReactFlow();
@@ -102,7 +103,7 @@ function GraphCanvasInner({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        onNodeClick={onNodeClick}
+        onSelectionChange={onSelectionChange}
         onDrop={onDrop}
         onDragOver={onDragOver}
         nodeTypes={nodeTypes}
@@ -138,7 +139,7 @@ export interface GraphCanvasProps {
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
   onConnect: OnConnect;
-  onNodeClick: (_event: React.MouseEvent, node: Node) => void;
+  onSelectionChange: OnSelectionChangeFunc;
   onAddNode: (type: AgentNodeType, position: { x: number; y: number }) => void;
 }
 

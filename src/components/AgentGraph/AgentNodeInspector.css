@@ -125,3 +125,83 @@
   color: #aaa;
   font-family: monospace;
 }
+
+.inspector__name-input {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text, #eee);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid transparent;
+  outline: none;
+  padding: 0;
+  width: 100%;
+  font-family: inherit;
+}
+
+.inspector__name-input:focus {
+  border-bottom-color: var(--accent, #4fc3f7);
+}
+
+.inspector__description {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted, #888);
+  line-height: 1.4;
+}
+
+.inspector__input {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 13px;
+  color: var(--text, #ccc);
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 4px;
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.inspector__input:focus {
+  border-color: var(--accent, #4fc3f7);
+}
+
+.inspector__input[type="number"] {
+  width: 100%;
+}
+
+.inspector__select {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 13px;
+  color: var(--text, #ccc);
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 4px;
+  outline: none;
+  font-family: inherit;
+  box-sizing: border-box;
+  cursor: pointer;
+  appearance: auto;
+}
+
+.inspector__select:focus {
+  border-color: var(--accent, #4fc3f7);
+}
+
+.inspector__checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text, #ccc);
+  cursor: pointer;
+}
+
+.inspector__checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent, #4fc3f7);
+  cursor: pointer;
+}

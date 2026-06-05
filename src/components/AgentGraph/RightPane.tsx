@@ -1,5 +1,5 @@
 import type { Node } from '@xyflow/react';
-import type { AgentNodeType } from '../../types/agentGraph';
+import type { AgentNodeData, AgentNodeType } from '../../types/agentGraph';
 import AgentNodeInspector from './AgentNodeInspector';
 import AgentNodePalette from './AgentNodePalette';
 import './RightPane.css';
@@ -11,6 +11,7 @@ interface RightPaneProps {
   activeTab: RightPaneTab;
   onTabChange: (tab: RightPaneTab) => void;
   onAddNode: (type: AgentNodeType) => void;
+  onUpdateNodeData: (nodeId: string, newData: Partial<AgentNodeData>) => void;
 }
 
 export default function RightPane({
@@ -18,6 +19,7 @@ export default function RightPane({
   activeTab,
   onTabChange,
   onAddNode,
+  onUpdateNodeData,
 }: RightPaneProps) {
   return (
     <aside className="right-pane">
@@ -39,7 +41,10 @@ export default function RightPane({
       </div>
       <div className="right-pane__content">
         {activeTab === 'info' ? (
-          <AgentNodeInspector node={selectedNode} />
+          <AgentNodeInspector
+            node={selectedNode}
+            onUpdateNodeData={onUpdateNodeData}
+          />
         ) : (
           <AgentNodePalette onAddNode={onAddNode} />
         )}
