@@ -2,6 +2,8 @@ import { useCallback } from 'react';
 import type { Node, Edge } from '@xyflow/react';
 import type { AgentNodeData, TraceEntry } from '../types/agentGraph';
 import { AGENT_NODE_DEFINITIONS } from '../types/agentGraph';
+import { generateEmbedding } from '../ai/embeddings';
+import { search as vectorSearch } from '../ai/vectorStore';
 
 export function useAgentGraphRunner() {
   const executeGraph = useCallback(async (
@@ -61,6 +63,41 @@ export function useAgentGraphRunner() {
           [{ role: 'user', content: prompt }],
           onToken,
         );
+      } else if (nodeType === 'rag') {
+        const k = (nodeData.k as number) ?? 3;
+        let chunks: string[];
+        try {
+          const embedding = await generateEmbedding(currentOutput);
+          const results = vectorSearch(embedding, k);
+          chunks = results.map((r) => r.document.content);
+        } catch {
+          chunks = [];
+        }
+        currentOutput = chunks.join('\n\n---\n\n');
+      } else if (nodeType === 'if-string-contains') {
+        const containsString = (nodeData.containsString as string) ?? '';
+        const caseSensitive = (nodeData.caseSensitive as boolean) ?? true;
+        const haystack = caseSensitive ? currentOutput : currentOutput.toLowerCase();
+        const needle = caseSensitive ? containsString : containsString.toLowerCase();
+        if (!haystack.includes(needle)) {
+          currentOutput = '';
+          break;
+        }
+      } else if (nodeType === 'if-closest-document') {
+        const threshold = (nodeData.threshold as number) ?? 0.7;
+        let conditionMet = false;
+        try {
+          const embedding = await generateEmbedding(currentOutput);
+          const results = vectorSearch(embedding, 1);
+          const bestScore = results.length > 0 ? results[0].score : 0;
+          conditionMet = bestScore >= threshold;
+        } catch {
+          // conditionMet stays false
+        }
+        if (!conditionMet) {
+          currentOutput = '';
+          break;
+        }
       }
 
       const outputPreview = currentOutput.length > 200
