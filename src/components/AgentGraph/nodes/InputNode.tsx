@@ -3,24 +3,28 @@ import type { AgentNodeData } from '../../../types/agentGraph';
 import { AGENT_NODE_DEFINITIONS } from '../../../types/agentGraph';
 import './InputNode.css';
 
+const positionMap: Record<string, Position> = {
+  left: Position.Left,
+  right: Position.Right,
+  top: Position.Top,
+  bottom: Position.Bottom,
+};
+
 export default function InputNode({ data, selected }: NodeProps) {
   const nodeData = data as unknown as AgentNodeData;
   const def = AGENT_NODE_DEFINITIONS[nodeData.nodeType];
 
   return (
     <div className={`input-node ${selected ? 'input-node--selected' : ''}`}>
-      <div className="input-node__header" style={{ backgroundColor: def.color }}>
-        <span className="input-node__label">{nodeData.label}</span>
-      </div>
       {def.handles.map((h) => (
         <Handle
           key={h.id}
           type={h.type}
-          position={Position[h.position.toUpperCase() as keyof typeof Position]}
+          position={positionMap[h.position]}
           id={h.id}
-          className="input-node__handle"
         />
       ))}
+      <span className="input-node__label">{nodeData.label}</span>
     </div>
   );
 }

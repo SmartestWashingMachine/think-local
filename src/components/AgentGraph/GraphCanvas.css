@@ -28,4 +28,18 @@
 
 .react-flow__node {
   background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  font-size: inherit !important;
+  box-shadow: none !important;
+}
+
+.react-flow__handle {
+  width: 8px !important;
+  height: 8px !important;
+  background: #888 !important;
+  border: none !important;
+  border-radius: 50% !important;
+  z-index: 2 !important;
 }

@@ -84,6 +84,7 @@ function GraphCanvasInner({
         nodeTypes={nodeTypes}
         fitView
         fitViewOptions={{ padding: 0.3 }}
+        proOptions={{ hideAttribution: true }}
         deleteKeyCode="Delete"
         selectionKeyCode="Shift"
         multiSelectionKeyCode="Control"
