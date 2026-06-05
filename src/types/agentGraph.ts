@@ -173,6 +173,16 @@ export const AGENT_NODE_DEFINITIONS: Record<AgentNodeType, AgentNodeDefinition> 
   },
 };
 
+export interface TraceEntry {
+  id: string;
+  timestamp: number;
+  nodeId: string;
+  nodeLabel: string;
+  nodeType: AgentNodeType;
+  type: 'input' | 'output';
+  description: string;
+}
+
 export const AGENT_NODE_CATEGORIES: { key: AgentNodeCategory; label: string }[] = [
   { key: 'input', label: 'Input' },
   { key: 'process', label: 'Process' },

@@ -8,7 +8,7 @@ import {
   type Connection,
   type NodeChange,
 } from '@xyflow/react';
-import type { AgentNodeType, AgentNodeData } from '../../types/agentGraph';
+import type { AgentNodeType, AgentNodeData, TraceEntry } from '../../types/agentGraph';
 import { AGENT_NODE_DEFINITIONS } from '../../types/agentGraph';
 import type { Message } from '../../types/chat';
 import { useAgentGraphRunner } from '../../hooks/useAgentGraphRunner';
@@ -53,7 +53,7 @@ const INITIAL_EDGES: Edge[] = [
   } as Edge,
 ];
 
-type RightPaneTab = 'info' | 'add';
+type RightPaneTab = 'info' | 'add' | 'trace';
 
 interface AgentGraphViewProps {
   onBack: () => void;
@@ -75,6 +75,7 @@ export default function AgentGraphView({ onBack, generateCompletionStream, messa
   const [rightPaneTab, setRightPaneTab] = useState<RightPaneTab>('info');
   const [sending, setSending] = useState(false);
   const [inputValue, setInputValue] = useState('');
+  const [traceEntries, setTraceEntries] = useState<TraceEntry[]>([]);
   const { executeGraph } = useAgentGraphRunner();
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -165,9 +166,16 @@ export default function AgentGraphView({ onBack, generateCompletionStream, messa
     if (!content || sending) return;
     setInputValue('');
     setSending(true);
+    setTraceEntries([]);
+    setRightPaneTab('trace');
+    const collected: TraceEntry[] = [];
     try {
       await sendMessage(content, async (_history, onToken) => {
-        return executeGraph(nodes, edges, content, generateCompletionStream, onToken);
+        const result = await executeGraph(nodes, edges, content, generateCompletionStream, onToken, (entry) => {
+          collected.push(entry);
+          setTraceEntries([...collected]);
+        });
+        return result;
       });
     } finally {
       setSending(false);
@@ -219,6 +227,7 @@ export default function AgentGraphView({ onBack, generateCompletionStream, messa
             onTabChange={setRightPaneTab}
             onAddNode={onAddNode}
             onUpdateNodeData={handleUpdateNodeData}
+            traceEntries={traceEntries}
           />
         </div>
         <div className="agent-graph-view__chat">

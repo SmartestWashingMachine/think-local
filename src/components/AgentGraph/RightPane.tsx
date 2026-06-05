@@ -1,10 +1,11 @@
 import type { Node } from '@xyflow/react';
-import type { AgentNodeData, AgentNodeType } from '../../types/agentGraph';
+import type { AgentNodeData, AgentNodeType, TraceEntry } from '../../types/agentGraph';
 import AgentNodeInspector from './AgentNodeInspector';
 import AgentNodePalette from './AgentNodePalette';
+import TracePanel from './TracePanel';
 import './RightPane.css';
 
-type RightPaneTab = 'info' | 'add';
+type RightPaneTab = 'info' | 'add' | 'trace';
 
 interface RightPaneProps {
   selectedNode: Node | null;
@@ -12,6 +13,7 @@ interface RightPaneProps {
   onTabChange: (tab: RightPaneTab) => void;
   onAddNode: (type: AgentNodeType) => void;
   onUpdateNodeData: (nodeId: string, newData: Partial<AgentNodeData>) => void;
+  traceEntries: TraceEntry[];
 }
 
 export default function RightPane({
@@ -20,6 +22,7 @@ export default function RightPane({
   onTabChange,
   onAddNode,
   onUpdateNodeData,
+  traceEntries,
 }: RightPaneProps) {
   return (
     <aside className="right-pane">
@@ -38,6 +41,13 @@ export default function RightPane({
         >
           Add Component
         </button>
+        <button
+          className={`right-pane__tab ${activeTab === 'trace' ? 'right-pane__tab--active' : ''}`}
+          onClick={() => onTabChange('trace')}
+          type="button"
+        >
+          Trace
+        </button>
       </div>
       <div className="right-pane__content">
         {activeTab === 'info' ? (
@@ -45,8 +55,10 @@ export default function RightPane({
             node={selectedNode}
             onUpdateNodeData={onUpdateNodeData}
           />
-        ) : (
+        ) : activeTab === 'add' ? (
           <AgentNodePalette onAddNode={onAddNode} />
+        ) : (
+          <TracePanel entries={traceEntries} />
         )}
       </div>
     </aside>
