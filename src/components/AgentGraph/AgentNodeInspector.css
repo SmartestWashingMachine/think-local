@@ -115,3 +115,13 @@
   color: var(--text-muted, #666);
   text-transform: capitalize;
 }
+
+.inspector__handle-type {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: #333;
+  color: #aaa;
+  font-family: monospace;
+}

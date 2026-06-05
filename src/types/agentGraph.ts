@@ -3,18 +3,20 @@ export type AgentNodeType =
   | 'llm'
   | 'rag'
   | 'string-joiner'
-  | 'not'
   | 'if-string-contains'
   | 'if-closest-document'
   | 'chat-message';
 
 export type AgentNodeCategory = 'input' | 'process' | 'if' | 'output';
 
+export type ValueType = 'string' | 'list<string>';
+
 export interface HandleConfig {
   id: string;
   label: string;
   type: 'source' | 'target';
   position: 'left' | 'right' | 'top' | 'bottom';
+  valueType: ValueType;
 }
 
 export interface AgentNodeData {
@@ -40,7 +42,7 @@ export const AGENT_NODE_DEFINITIONS: Record<AgentNodeType, AgentNodeDefinition> 
     color: '#4caf50',
     description: 'The initial user input — always present',
     handles: [
-      { id: 'output', label: 'Query', type: 'source', position: 'bottom' },
+      { id: 'output', label: 'Query', type: 'source', position: 'bottom', valueType: 'string' },
     ],
   },
   llm: {
@@ -50,8 +52,8 @@ export const AGENT_NODE_DEFINITIONS: Record<AgentNodeType, AgentNodeDefinition> 
     color: '#2196f3',
     description: 'Calls a language model with an input string',
     handles: [
-      { id: 'input', label: 'Input', type: 'target', position: 'top' },
-      { id: 'output', label: 'Output', type: 'source', position: 'bottom' },
+      { id: 'input', label: 'Input', type: 'target', position: 'top', valueType: 'string' },
+      { id: 'output', label: 'Output', type: 'source', position: 'bottom', valueType: 'string' },
     ],
   },
   rag: {
@@ -61,8 +63,8 @@ export const AGENT_NODE_DEFINITIONS: Record<AgentNodeType, AgentNodeDefinition> 
     color: '#2196f3',
     description: 'Retrieves relevant document chunks for a query',
     handles: [
-      { id: 'input', label: 'Query', type: 'target', position: 'top' },
-      { id: 'output', label: 'Chunks', type: 'source', position: 'bottom' },
+      { id: 'input', label: 'Query', type: 'target', position: 'top', valueType: 'string' },
+      { id: 'output', label: 'Chunks', type: 'source', position: 'bottom', valueType: 'list<string>' },
     ],
   },
   'string-joiner': {
@@ -72,19 +74,8 @@ export const AGENT_NODE_DEFINITIONS: Record<AgentNodeType, AgentNodeDefinition> 
     color: '#2196f3',
     description: 'Joins multiple strings into one',
     handles: [
-      { id: 'input', label: 'Strings', type: 'target', position: 'top' },
-      { id: 'output', label: 'Output', type: 'source', position: 'bottom' },
-    ],
-  },
-  not: {
-    type: 'not',
-    category: 'if',
-    label: 'NOT',
-    color: '#ff9800',
-    description: 'Inverts an incoming boolean-like signal',
-    handles: [
-      { id: 'input', label: 'Input', type: 'target', position: 'top' },
-      { id: 'output', label: 'Output', type: 'source', position: 'bottom' },
+      { id: 'input', label: 'Strings', type: 'target', position: 'top', valueType: 'list<string>' },
+      { id: 'output', label: 'Output', type: 'source', position: 'bottom', valueType: 'string' },
     ],
   },
   'if-string-contains': {
@@ -94,9 +85,9 @@ export const AGENT_NODE_DEFINITIONS: Record<AgentNodeType, AgentNodeDefinition> 
     color: '#ff9800',
     description: 'Branches based on whether a substring is found',
     handles: [
-      { id: 'input', label: 'Input', type: 'target', position: 'top' },
-      { id: 'true', label: 'True', type: 'source', position: 'bottom' },
-      { id: 'false', label: 'False', type: 'source', position: 'right' },
+      { id: 'input', label: 'Input', type: 'target', position: 'top', valueType: 'string' },
+      { id: 'true', label: 'True', type: 'source', position: 'bottom', valueType: 'string' },
+      { id: 'false', label: 'False', type: 'source', position: 'right', valueType: 'string' },
     ],
   },
   'if-closest-document': {
@@ -106,9 +97,9 @@ export const AGENT_NODE_DEFINITIONS: Record<AgentNodeType, AgentNodeDefinition> 
     color: '#ff9800',
     description: 'Branches based on the closest matching document',
     handles: [
-      { id: 'input', label: 'Query', type: 'target', position: 'top' },
-      { id: 'true', label: 'Found', type: 'source', position: 'bottom' },
-      { id: 'false', label: 'Not Found', type: 'source', position: 'right' },
+      { id: 'input', label: 'Query', type: 'target', position: 'top', valueType: 'string' },
+      { id: 'true', label: 'Found', type: 'source', position: 'bottom', valueType: 'string' },
+      { id: 'false', label: 'Not Found', type: 'source', position: 'right', valueType: 'string' },
     ],
   },
   'chat-message': {
@@ -118,7 +109,7 @@ export const AGENT_NODE_DEFINITIONS: Record<AgentNodeType, AgentNodeDefinition> 
     color: '#9c27b0',
     description: 'Displays the final output as a chat message',
     handles: [
-      { id: 'input', label: 'Input', type: 'target', position: 'top' },
+      { id: 'input', label: 'Input', type: 'target', position: 'top', valueType: 'string' },
     ],
   },
 };

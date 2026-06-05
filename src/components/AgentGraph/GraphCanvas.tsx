@@ -12,9 +12,11 @@ import {
   type OnEdgesChange,
   type OnConnect,
   type NodeTypes,
+  type Connection,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import type { AgentNodeType } from '../../types/agentGraph';
+import type { AgentNodeType, AgentNodeData } from '../../types/agentGraph';
+import { AGENT_NODE_DEFINITIONS } from '../../types/agentGraph';
 import InputNode from './nodes/InputNode';
 import ProcessNode from './nodes/ProcessNode';
 import IfNode from './nodes/IfNode';
@@ -48,6 +50,28 @@ function GraphCanvasInner({
   onAddNode,
 }: GraphCanvasInnerProps) {
   const reactFlowInstance = useReactFlow();
+
+  const isValidConnection = useCallback(
+    (connection: Connection | Edge) => {
+      if (!connection.source || !connection.target || connection.sourceHandle == null || connection.targetHandle == null) return false;
+
+      const sourceNode = nodes.find((n) => n.id === connection.source);
+      const targetNode = nodes.find((n) => n.id === connection.target);
+      if (!sourceNode || !targetNode) return false;
+
+      const sourceData = sourceNode.data as unknown as AgentNodeData;
+      const targetData = targetNode.data as unknown as AgentNodeData;
+      const sourceDef = AGENT_NODE_DEFINITIONS[sourceData.nodeType];
+      const targetDef = AGENT_NODE_DEFINITIONS[targetData.nodeType];
+
+      const sourceHandleCfg = sourceDef.handles.find((h) => h.id === connection.sourceHandle);
+      const targetHandleCfg = targetDef.handles.find((h) => h.id === connection.targetHandle);
+      if (!sourceHandleCfg || !targetHandleCfg) return false;
+
+      return sourceHandleCfg.valueType === targetHandleCfg.valueType;
+    },
+    [nodes],
+  );
 
   const onDragOver = useCallback((event: DragEvent) => {
     event.preventDefault();
@@ -89,6 +113,7 @@ function GraphCanvasInner({
         selectionKeyCode="Shift"
         multiSelectionKeyCode="Control"
         className="graph-canvas__flow"
+        isValidConnection={isValidConnection}
       >
         <Background color="#333" gap={20} size={1} />
         <Controls

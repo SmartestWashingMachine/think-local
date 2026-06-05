@@ -57,6 +57,7 @@ export default function AgentNodeInspector({ node }: AgentNodeInspectorProps) {
               </span>
               <span className="inspector__handle-name">{h.label}</span>
               <span className="inspector__handle-position">{h.position}</span>
+              <span className="inspector__handle-type">{h.valueType}</span>
             </div>
           ))}
         </div>
