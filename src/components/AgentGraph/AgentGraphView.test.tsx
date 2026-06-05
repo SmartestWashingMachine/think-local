@@ -37,6 +37,9 @@ vi.mock('./RightPane', () => ({
 
 describe('AgentGraphView', () => {
   const onBack = vi.fn();
+  const generateCompletionStream = vi.fn();
+  const sendMessage = vi.fn();
+  const messages: { id: string; role: 'user' | 'assistant'; content: string; createdAt: number }[] = [];
 
   beforeEach(() => {
     capturedOnUpdateNodeData = null;
@@ -44,13 +47,29 @@ describe('AgentGraphView', () => {
   });
 
   it('renders the graph canvas and right pane', () => {
-    render(<AgentGraphView onBack={onBack} />);
+    render(
+      <AgentGraphView
+        onBack={onBack}
+        generateCompletionStream={generateCompletionStream}
+        messages={messages}
+        sendMessage={sendMessage}
+        modelStatus="loaded"
+      />,
+    );
     expect(screen.getByTestId('graph-canvas')).toBeInTheDocument();
     expect(screen.getByTestId('right-pane')).toBeInTheDocument();
   });
 
   it('passes onUpdateNodeData to RightPane', () => {
-    render(<AgentGraphView onBack={onBack} />);
+    render(
+      <AgentGraphView
+        onBack={onBack}
+        generateCompletionStream={generateCompletionStream}
+        messages={messages}
+        sendMessage={sendMessage}
+        modelStatus="loaded"
+      />,
+    );
     expect(capturedOnUpdateNodeData).not.toBeNull();
   });
 
@@ -63,7 +82,15 @@ describe('AgentGraphView', () => {
       data: { nodeType: 'string-joiner', label: 'Test', joinString: '\n' },
     } as unknown as Node;
 
-    render(<AgentGraphView onBack={onBack} />);
+    render(
+      <AgentGraphView
+        onBack={onBack}
+        generateCompletionStream={generateCompletionStream}
+        messages={messages}
+        sendMessage={sendMessage}
+        modelStatus="loaded"
+      />,
+    );
 
     let capturedUpdater: ((prev: Node[]) => Node[]) | null = null;
     mockSetNodes.mockImplementation((updater: unknown) => {
@@ -98,7 +125,15 @@ describe('AgentGraphView', () => {
       data: { nodeType: 'llm', label: 'Node 2' },
     } as unknown as Node;
 
-    render(<AgentGraphView onBack={onBack} />);
+    render(
+      <AgentGraphView
+        onBack={onBack}
+        generateCompletionStream={generateCompletionStream}
+        messages={messages}
+        sendMessage={sendMessage}
+        modelStatus="loaded"
+      />,
+    );
 
     let capturedUpdater: ((prev: Node[]) => Node[]) | null = null;
     mockSetNodes.mockImplementation((updater: unknown) => {

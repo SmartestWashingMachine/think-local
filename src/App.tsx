@@ -110,6 +110,8 @@ export default function App() {
           onSwitchConversation={switchConversation}
           onDeleteConversation={deleteConversation}
           onSendMessage={handleSendMessage}
+          sendMessage={sendMessage}
+          generateCompletionStream={generateCompletionStream}
           onAugmentWithRag={handleAugmentWithRag}
           onImportConversations={importConversations}
           onExportConversations={exportConversations}

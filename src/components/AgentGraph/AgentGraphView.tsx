@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import {
   useNodesState,
   useEdgesState,
@@ -10,6 +10,8 @@ import {
 } from '@xyflow/react';
 import type { AgentNodeType, AgentNodeData } from '../../types/agentGraph';
 import { AGENT_NODE_DEFINITIONS } from '../../types/agentGraph';
+import type { Message } from '../../types/chat';
+import { useAgentGraphRunner } from '../../hooks/useAgentGraphRunner';
 import GraphCanvas from './GraphCanvas';
 import RightPane from './RightPane';
 import './AgentGraphView.css';
@@ -24,22 +26,62 @@ function createNode(type: AgentNodeType, position: { x: number; y: number }, id?
   } as unknown as Node;
 }
 
-const INITIAL_NODE = createNode('user-query', { x: 100, y: 200 });
-const USER_QUERY_NODE_ID = INITIAL_NODE.id;
+const USER_QUERY_NODE = createNode('user-query', { x: 100, y: 200 });
+const LLM_NODE = createNode('llm', { x: 350, y: 200 });
+const CHAT_MESSAGE_NODE = createNode('chat-message', { x: 600, y: 200 });
+
+const USER_QUERY_NODE_ID = USER_QUERY_NODE.id;
+const CHAT_MESSAGE_NODE_ID = CHAT_MESSAGE_NODE.id;
+
+const INITIAL_NODES = [USER_QUERY_NODE, LLM_NODE, CHAT_MESSAGE_NODE];
+const INITIAL_EDGES: Edge[] = [
+  {
+    id: crypto.randomUUID(),
+    source: USER_QUERY_NODE_ID,
+    target: LLM_NODE.id,
+    sourceHandle: 'output',
+    targetHandle: 'input',
+    style: { stroke: '#666', strokeWidth: 2 },
+  } as Edge,
+  {
+    id: crypto.randomUUID(),
+    source: LLM_NODE.id,
+    target: CHAT_MESSAGE_NODE_ID,
+    sourceHandle: 'output',
+    targetHandle: 'input',
+    style: { stroke: '#666', strokeWidth: 2 },
+  } as Edge,
+];
 
 type RightPaneTab = 'info' | 'add';
 
 interface AgentGraphViewProps {
   onBack: () => void;
+  generateCompletionStream: (
+    messages: { role: 'user' | 'assistant' | 'system'; content: string }[],
+    onToken: (token: string) => void,
+  ) => Promise<string>;
+  messages: Message[];
+  sendMessage: (
+    content: string,
+    onStream?: (messages: Message[], onToken: (token: string) => void) => Promise<string>,
+  ) => Promise<void>;
+  modelStatus: string;
 }
 
-export default function AgentGraphView({ onBack }: AgentGraphViewProps) {
-  const [nodes, setNodes, onNodesChange] = useNodesState([INITIAL_NODE]);
+export default function AgentGraphView({ onBack, generateCompletionStream, messages, sendMessage, modelStatus }: AgentGraphViewProps) {
+  const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_NODES);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(INITIAL_EDGES);
+  const [rightPaneTab, setRightPaneTab] = useState<RightPaneTab>('info');
+  const [sending, setSending] = useState(false);
+  const [inputValue, setInputValue] = useState('');
+  const { executeGraph } = useAgentGraphRunner();
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
       const filtered = changes.filter((change) => {
-        if (change.type === 'remove' && change.id === USER_QUERY_NODE_ID) {
+        if (change.type === 'remove' && (change.id === USER_QUERY_NODE_ID || change.id === CHAT_MESSAGE_NODE_ID)) {
           return false;
         }
         return true;
@@ -48,9 +90,6 @@ export default function AgentGraphView({ onBack }: AgentGraphViewProps) {
     },
     [onNodesChange],
   );
-  const initialEdges: Edge[] = [];
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [rightPaneTab, setRightPaneTab] = useState<RightPaneTab>('info');
 
   const onConnect = useCallback(
     (connection: Connection) => {
@@ -121,6 +160,25 @@ export default function AgentGraphView({ onBack }: AgentGraphViewProps) {
     [setNodes],
   );
 
+  const handleSend = useCallback(async () => {
+    const content = inputValue.trim();
+    if (!content || sending) return;
+    setInputValue('');
+    setSending(true);
+    try {
+      await sendMessage(content, async (_history, onToken) => {
+        return executeGraph(nodes, edges, content, generateCompletionStream, onToken);
+      });
+    } finally {
+      setSending(false);
+      inputRef.current?.focus();
+    }
+  }, [inputValue, sending, sendMessage, nodes, edges, generateCompletionStream, executeGraph]);
+
+  function formatTime(ts: number): string {
+    return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
   return (
     <div className="agent-graph-view">
       <header className="agent-graph-view__header">
@@ -145,22 +203,69 @@ export default function AgentGraphView({ onBack }: AgentGraphViewProps) {
         </div>
       </header>
       <div className="agent-graph-view__body">
-        <GraphCanvas
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={handleNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onSelectionChange={onSelectionChange}
-          onAddNode={onAddNodeAtPosition}
-        />
-        <RightPane
-          selectedNode={selectedNode}
-          activeTab={rightPaneTab}
-          onTabChange={setRightPaneTab}
-          onAddNode={onAddNode}
-          onUpdateNodeData={handleUpdateNodeData}
-        />
+        <div className="agent-graph-view__canvas-section">
+          <GraphCanvas
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={handleNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onSelectionChange={onSelectionChange}
+            onAddNode={onAddNodeAtPosition}
+          />
+          <RightPane
+            selectedNode={selectedNode}
+            activeTab={rightPaneTab}
+            onTabChange={setRightPaneTab}
+            onAddNode={onAddNode}
+            onUpdateNodeData={handleUpdateNodeData}
+          />
+        </div>
+        <div className="agent-graph-view__chat">
+          <div className="agent-graph-view__messages">
+            {messages.length === 0 && (
+              <p className="agent-graph-view__empty-msg">Type a message to run the graph.</p>
+            )}
+            {messages.map((msg) => (
+              <div key={msg.id} className={`agent-graph-view__message agent-graph-view__message--${msg.role}`}>
+                <div className="agent-graph-view__bubble">
+                  <p className="agent-graph-view__msg-content">{msg.content}</p>
+                  <span className="agent-graph-view__msg-time">{formatTime(msg.createdAt)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="agent-graph-view__input-area">
+            {modelStatus !== 'loaded' && (
+              <p className="agent-graph-view__model-warning">No model loaded. Select a model first.</p>
+            )}
+            <div className="agent-graph-view__input-row">
+              <textarea
+                ref={inputRef}
+                className="agent-graph-view__input"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                placeholder="Type a message to run the graph..."
+                rows={1}
+                disabled={sending}
+              />
+              <button
+                className="agent-graph-view__send-btn"
+                onClick={handleSend}
+                disabled={sending || !inputValue.trim() || modelStatus !== 'loaded'}
+                type="button"
+              >
+                {sending ? '...' : 'Send'}
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Conversation, ViewState } from '../types/chat';
+import type { Conversation, ViewState, Message } from '../types/chat';
 import type { StoredDocument } from '../types/rag';
 import { RAG_FIRST_MESSAGE_TEMPLATE, RAG_DEFAULT_TEMPLATE } from '../constants/rag';
 import Sidebar from './Sidebar';
@@ -20,6 +20,14 @@ interface ChatProps {
   onSwitchConversation: (id: string) => void;
   onDeleteConversation: (id: string) => void;
   onSendMessage: (content: string) => Promise<void>;
+  sendMessage: (
+    content: string,
+    onStream?: (messages: Message[], onToken: (token: string) => void) => Promise<string>,
+  ) => Promise<void>;
+  generateCompletionStream: (
+    messages: { role: 'user' | 'assistant' | 'system'; content: string }[],
+    onToken: (token: string) => void,
+  ) => Promise<string>;
   onAugmentWithRag?: (query: string) => Promise<string>;
   onImportConversations: (conversations: Conversation[]) => void;
   onExportConversations: () => Conversation[];
@@ -43,6 +51,8 @@ export default function Chat({
   onSwitchConversation,
   onDeleteConversation,
   onSendMessage,
+  sendMessage,
+  generateCompletionStream,
   onAugmentWithRag,
   onImportConversations,
   onExportConversations,
@@ -95,7 +105,13 @@ export default function Chat({
       />
       <main className="chat__main">
         {view === 'agent-graph' ? (
-          <AgentGraphView onBack={() => onNavigate('chat')} />
+          <AgentGraphView
+            onBack={() => onNavigate('chat')}
+            generateCompletionStream={generateCompletionStream}
+            messages={activeConversation?.messages ?? []}
+            sendMessage={sendMessage}
+            modelStatus={modelStatus}
+          />
         ) : view === 'rag' ? (
           <RagView
             documents={ragDocuments}

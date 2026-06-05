@@ -92,8 +92,10 @@ export const AGENT_NODE_DEFINITIONS: Record<AgentNodeType, AgentNodeDefinition> 
       { id: 'input', label: 'Input', type: 'target', position: 'top', valueType: 'string' },
       { id: 'output', label: 'Output', type: 'source', position: 'bottom', valueType: 'string' },
     ],
-    properties: [],
-    defaults: {},
+    properties: [
+      { key: 'message', label: 'Message', type: 'text', placeholder: '{text}', description: 'Template for the LLM prompt. Use {text} to insert the input.' },
+    ],
+    defaults: { message: '{text}' },
   },
   rag: {
     type: 'rag',
