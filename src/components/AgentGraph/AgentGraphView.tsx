@@ -50,7 +50,6 @@ export default function AgentGraphView({ onBack }: AgentGraphViewProps) {
   );
   const initialEdges: Edge[] = [];
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [rightPaneTab, setRightPaneTab] = useState<RightPaneTab>('info');
 
   const onConnect = useCallback(
@@ -78,13 +77,12 @@ export default function AgentGraphView({ onBack }: AgentGraphViewProps) {
     [nodes, setEdges],
   );
 
+  const selectedNode = nodes.find((n) => n.selected) ?? null;
+
   const onSelectionChange = useCallback(
     ({ nodes: selectedNodes }: { nodes: Node[]; edges: Edge[] }) => {
       if (selectedNodes.length > 0) {
-        setSelectedNode(selectedNodes[0]);
         setRightPaneTab('info');
-      } else {
-        setSelectedNode(null);
       }
     },
     [],
