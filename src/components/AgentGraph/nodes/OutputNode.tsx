@@ -1,5 +1,5 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import type { AgentNodeData, ValueType } from '../../../types/agentGraph';
+import type { AgentNodeData } from '../../../types/agentGraph';
 import { AGENT_NODE_DEFINITIONS } from '../../../types/agentGraph';
 import './OutputNode.css';
 
@@ -10,20 +10,9 @@ const positionMap: Record<string, Position> = {
   bottom: Position.Bottom,
 };
 
-const valueTypeStyle: Record<ValueType, React.CSSProperties> = {
-  string: {
-    background: '#4fc3f7',
-    border: '2px solid #4fc3f7',
-    width: 12,
-    height: 12,
-  },
-  'list<string>': {
-    background: '#ffb74d',
-    border: '2px dashed #ffb74d',
-    width: 12,
-    height: 12,
-    borderRadius: 2,
-  },
+const handleClass: Record<string, string> = {
+  string: 'handle--string',
+  'list<string>': 'handle--list-string',
 };
 
 export default function OutputNode({ data, selected }: NodeProps) {
@@ -38,7 +27,7 @@ export default function OutputNode({ data, selected }: NodeProps) {
           type={h.type}
           position={positionMap[h.position]}
           id={h.id}
-          style={valueTypeStyle[h.valueType]}
+          className={handleClass[h.valueType]}
         />
       ))}
       <span className="output-node__label">{nodeData.label}</span>

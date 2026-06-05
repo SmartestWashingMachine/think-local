@@ -43,3 +43,11 @@
   border-radius: 50% !important;
   z-index: 2 !important;
 }
+
+.react-flow__handle.handle--list-string {
+  width: 12px !important;
+  height: 12px !important;
+  background: #bbb !important;
+  border: 2px dashed #bbb !important;
+  border-radius: 2px !important;
+}

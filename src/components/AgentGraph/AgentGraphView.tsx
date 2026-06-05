@@ -8,7 +8,7 @@ import {
   type Connection,
   type NodeChange,
 } from '@xyflow/react';
-import type { AgentNodeType } from '../../types/agentGraph';
+import type { AgentNodeType, AgentNodeData } from '../../types/agentGraph';
 import { AGENT_NODE_DEFINITIONS } from '../../types/agentGraph';
 import GraphCanvas from './GraphCanvas';
 import RightPane from './RightPane';
@@ -55,9 +55,27 @@ export default function AgentGraphView({ onBack }: AgentGraphViewProps) {
 
   const onConnect = useCallback(
     (connection: Connection) => {
-      setEdges((eds) => addEdge(connection, eds));
+      const sourceNode = nodes.find((n) => n.id === connection.source);
+      const sourceData = sourceNode?.data as unknown as AgentNodeData | undefined;
+      const sourceDef = sourceData ? AGENT_NODE_DEFINITIONS[sourceData.nodeType] : undefined;
+      const sourceHandleCfg = sourceDef?.handles.find((h) => h.id === connection.sourceHandle);
+      const isList = sourceHandleCfg?.valueType === 'list<string>';
+
+      setEdges((eds) =>
+        addEdge(
+          {
+            ...connection,
+            style: {
+              stroke: isList ? '#ccc' : '#666',
+              strokeDasharray: isList ? '6 3' : undefined,
+              strokeWidth: 2,
+            },
+          } as Edge,
+          eds,
+        ),
+      );
     },
-    [setEdges],
+    [nodes, setEdges],
   );
 
   const onNodeClick = useCallback(
