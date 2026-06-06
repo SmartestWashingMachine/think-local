@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   useNodesState,
   useEdgesState,
@@ -11,6 +11,7 @@ import {
 import type { AgentNodeType, AgentNodeData, TraceEntry } from '../../types/agentGraph';
 import { AGENT_NODE_DEFINITIONS } from '../../types/agentGraph';
 import type { Message } from '../../types/chat';
+import { STORAGE_KEYS } from '../../constants/chat';
 import { useAgentGraphRunner } from '../../hooks/useAgentGraphRunner';
 import GraphCanvas from './GraphCanvas';
 import RightPane from './RightPane';
@@ -57,6 +58,7 @@ type RightPaneTab = 'info' | 'add' | 'trace';
 
 interface AgentGraphViewProps {
   onBack: () => void;
+  onClearChat: () => void;
   generateCompletionStream: (
     messages: { role: 'user' | 'assistant' | 'system'; content: string }[],
     onToken: (token: string) => void,
@@ -69,9 +71,43 @@ interface AgentGraphViewProps {
   modelStatus: string;
 }
 
-export default function AgentGraphView({ onBack, generateCompletionStream, messages, sendMessage, modelStatus }: AgentGraphViewProps) {
-  const [nodes, setNodes, onNodesChange] = useNodesState(INITIAL_NODES);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(INITIAL_EDGES);
+function loadGraphNodes(): Node[] | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.agentGraphNodes);
+    return raw ? (JSON.parse(raw) as Node[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+function loadGraphEdges(): Edge[] | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.agentGraphEdges);
+    return raw ? (JSON.parse(raw) as Edge[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveGraphNodes(nodes: Node[]) {
+  localStorage.setItem(STORAGE_KEYS.agentGraphNodes, JSON.stringify(nodes));
+}
+
+function saveGraphEdges(edges: Edge[]) {
+  localStorage.setItem(STORAGE_KEYS.agentGraphEdges, JSON.stringify(edges));
+}
+
+export default function AgentGraphView({ onBack, onClearChat, generateCompletionStream, messages, sendMessage, modelStatus }: AgentGraphViewProps) {
+  const [nodes, setNodes, onNodesChange] = useNodesState(loadGraphNodes() ?? INITIAL_NODES);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(loadGraphEdges() ?? INITIAL_EDGES);
+
+  useEffect(() => {
+    saveGraphNodes(nodes);
+  }, [nodes]);
+
+  useEffect(() => {
+    saveGraphEdges(edges);
+  }, [edges]);
   const [rightPaneTab, setRightPaneTab] = useState<RightPaneTab>('info');
   const [sending, setSending] = useState(false);
   const [inputValue, setInputValue] = useState('');
@@ -208,6 +244,17 @@ export default function AgentGraphView({ onBack, generateCompletionStream, messa
           <span className="agent-graph-view__node-count">
             {nodes.length} node{nodes.length !== 1 ? 's' : ''}
           </span>
+          <button
+            className="agent-graph-view__clear-btn"
+            onClick={onClearChat}
+            type="button"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+            Clear
+          </button>
         </div>
       </header>
       <div className="agent-graph-view__body">

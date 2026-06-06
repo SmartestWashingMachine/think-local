@@ -180,6 +180,15 @@ export function useConversations() {
     [activeId, activeConversation],
   );
 
+  const clearMessages = useCallback(() => {
+    if (!activeId) return;
+    setConversations((prev) =>
+      prev.map((c) =>
+        c.id === activeId ? { ...c, messages: [] } : c,
+      ),
+    );
+  }, [activeId]);
+
   const renameConversation = useCallback((id: string, title: string) => {
     setConversations((prev) =>
       prev.map((c) => (c.id === id ? { ...c, title } : c)),
@@ -208,6 +217,7 @@ export function useConversations() {
     deleteConversation,
     sendMessage,
     renameConversation,
+    clearMessages,
     importConversations,
     exportConversations,
   };

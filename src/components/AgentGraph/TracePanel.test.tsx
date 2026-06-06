@@ -76,4 +76,5 @@ describe('TracePanel', () => {
     expect(screen.getByText('IN')).toBeInTheDocument();
     expect(screen.getByText('OUT')).toBeInTheDocument();
   });
+
 });

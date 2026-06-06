@@ -6,4 +6,6 @@ export const STORAGE_KEYS = {
   activeId: 'secret-chatter-active-id',
   theme: 'secret-chatter-theme',
   model: 'secret-chatter-active-model',
+  agentGraphNodes: 'secret-chatter-agent-graph-nodes',
+  agentGraphEdges: 'secret-chatter-agent-graph-edges',
 } as const;

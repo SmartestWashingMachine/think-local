@@ -59,6 +59,26 @@
   color: var(--text-muted, #888);
 }
 
+.agent-graph-view__clear-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border: 1px solid var(--border, #333);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted, #888);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+
+  &:hover {
+    background: var(--bg-hover, #252540);
+    color: #e57373;
+    border-color: #e57373;
+  }
+}
+
 .agent-graph-view__body {
   flex: 1;
   display: flex;

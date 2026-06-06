@@ -6,6 +6,17 @@ import AgentGraphView from './AgentGraphView';
 const mockSetNodes = vi.fn();
 let capturedOnUpdateNodeData: ((nodeId: string, newData: Record<string, unknown>) => void) | null = null;
 
+const localStorageMock = (() => {
+  let store: Record<string, string> = {};
+  return {
+    getItem: vi.fn((key: string) => store[key] ?? null),
+    setItem: vi.fn((key: string, value: string) => { store[key] = value; }),
+    removeItem: vi.fn((key: string) => { delete store[key]; }),
+    clear: vi.fn(() => { store = {}; }),
+  };
+})();
+Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock });
+
 vi.mock('@xyflow/react', () => ({
   useNodesState: () => [[], mockSetNodes, vi.fn()],
   useEdgesState: () => [[], vi.fn(), vi.fn()],
@@ -44,12 +55,15 @@ describe('AgentGraphView', () => {
   beforeEach(() => {
     capturedOnUpdateNodeData = null;
     vi.clearAllMocks();
+    localStorageMock.clear();
   });
 
-  it('renders the graph canvas and right pane', () => {
+  it('renders the graph canvas, right pane, and clear button', () => {
+    const onClearChat = vi.fn();
     render(
       <AgentGraphView
         onBack={onBack}
+        onClearChat={onClearChat}
         generateCompletionStream={generateCompletionStream}
         messages={messages}
         sendMessage={sendMessage}
@@ -58,12 +72,30 @@ describe('AgentGraphView', () => {
     );
     expect(screen.getByTestId('graph-canvas')).toBeInTheDocument();
     expect(screen.getByTestId('right-pane')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /clear/i })).toBeInTheDocument();
+  });
+
+  it('calls onClearChat when clear button is clicked', () => {
+    const onClearChat = vi.fn();
+    render(
+      <AgentGraphView
+        onBack={onBack}
+        onClearChat={onClearChat}
+        generateCompletionStream={generateCompletionStream}
+        messages={messages}
+        sendMessage={sendMessage}
+        modelStatus="loaded"
+      />,
+    );
+    screen.getByRole('button', { name: /clear/i }).click();
+    expect(onClearChat).toHaveBeenCalled();
   });
 
   it('passes onUpdateNodeData to RightPane', () => {
     render(
       <AgentGraphView
         onBack={onBack}
+        onClearChat={vi.fn()}
         generateCompletionStream={generateCompletionStream}
         messages={messages}
         sendMessage={sendMessage}
@@ -85,6 +117,7 @@ describe('AgentGraphView', () => {
     render(
       <AgentGraphView
         onBack={onBack}
+        onClearChat={vi.fn()}
         generateCompletionStream={generateCompletionStream}
         messages={messages}
         sendMessage={sendMessage}
@@ -128,6 +161,7 @@ describe('AgentGraphView', () => {
     render(
       <AgentGraphView
         onBack={onBack}
+        onClearChat={vi.fn()}
         generateCompletionStream={generateCompletionStream}
         messages={messages}
         sendMessage={sendMessage}
@@ -147,5 +181,23 @@ describe('AgentGraphView', () => {
     const result = capturedUpdater!([node1, node2]);
     expect((result[0].data as Record<string, unknown>).joinString).toBe('|');
     expect((result[1].data as Record<string, unknown>).label).toBe('Node 2');
+  });
+
+  it('persists nodes to localStorage when nodes change', () => {
+    render(
+      <AgentGraphView
+        onBack={onBack}
+        onClearChat={vi.fn()}
+        generateCompletionStream={generateCompletionStream}
+        messages={messages}
+        sendMessage={sendMessage}
+        modelStatus="loaded"
+      />,
+    );
+    // On mount, nodes are set via useNodesState (mocked to return []) so useEffect fires but saves []
+    expect(localStorageMock.setItem).toHaveBeenCalledWith(
+      'secret-chatter-agent-graph-nodes',
+      '[]',
+    );
   });
 });

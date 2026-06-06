@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import type { TraceEntry } from '../../types/agentGraph';
 import './TracePanel.css';
 
@@ -10,6 +11,14 @@ function formatTime(ts: number): string {
 }
 
 export default function TracePanel({ entries }: TracePanelProps) {
+  const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (listRef.current) {
+      listRef.current.scrollTop = listRef.current.scrollHeight;
+    }
+  }, [entries]);
+
   if (entries.length === 0) {
     return (
       <div className="trace-panel trace-panel--empty">
@@ -26,7 +35,7 @@ export default function TracePanel({ entries }: TracePanelProps) {
         <h3 className="trace-panel__title">Execution Trace</h3>
         <span className="trace-panel__count">{entries.length} step{entries.length !== 1 ? 's' : ''}</span>
       </div>
-      <div className="trace-panel__list">
+      <div className="trace-panel__list" ref={listRef}>
         {entries.map((entry) => (
           <div key={entry.id} className={`trace-panel__entry trace-panel__entry--${entry.type}`}>
             <div className="trace-panel__entry-line">

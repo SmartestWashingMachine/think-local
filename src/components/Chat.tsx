@@ -24,6 +24,7 @@ interface ChatProps {
     content: string,
     onStream?: (messages: Message[], onToken: (token: string) => void) => Promise<string>,
   ) => Promise<void>;
+  clearMessages: () => void;
   generateCompletionStream: (
     messages: { role: 'user' | 'assistant' | 'system'; content: string }[],
     onToken: (token: string) => void,
@@ -52,6 +53,7 @@ export default function Chat({
   onDeleteConversation,
   onSendMessage,
   sendMessage,
+  clearMessages,
   generateCompletionStream,
   onAugmentWithRag,
   onImportConversations,
@@ -107,6 +109,7 @@ export default function Chat({
         {view === 'agent-graph' ? (
           <AgentGraphView
             onBack={() => onNavigate('chat')}
+            onClearChat={clearMessages}
             generateCompletionStream={generateCompletionStream}
             messages={activeConversation?.messages ?? []}
             sendMessage={sendMessage}
