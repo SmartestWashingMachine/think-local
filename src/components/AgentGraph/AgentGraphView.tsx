@@ -97,7 +97,7 @@ function saveGraphEdges(edges: Edge[]) {
   localStorage.setItem(STORAGE_KEYS.agentGraphEdges, JSON.stringify(edges));
 }
 
-export default function AgentGraphView({ onBack, onClearChat, generateCompletionStream, messages, sendMessage, modelStatus }: AgentGraphViewProps) {
+export default function AgentGraphView({ onClearChat, generateCompletionStream, messages, sendMessage, modelStatus }: AgentGraphViewProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState(loadGraphNodes() ?? INITIAL_NODES);
   const [edges, setEdges, onEdgesChange] = useEdgesState(loadGraphEdges() ?? INITIAL_EDGES);
 
@@ -114,6 +114,13 @@ export default function AgentGraphView({ onBack, onClearChat, generateCompletion
   const [traceEntries, setTraceEntries] = useState<TraceEntry[]>([]);
   const { executeGraph } = useAgentGraphRunner();
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const messagesRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (messagesRef.current) {
+      messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -225,38 +232,6 @@ export default function AgentGraphView({ onBack, onClearChat, generateCompletion
 
   return (
     <div className="agent-graph-view">
-      <header className="agent-graph-view__header">
-        <div className="agent-graph-view__header-left">
-          <button
-            className="agent-graph-view__back-btn"
-            onClick={onBack}
-            type="button"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="19" y1="12" x2="5" y2="12" />
-              <polyline points="12 19 5 12 12 5" />
-            </svg>
-            Back
-          </button>
-          <h2 className="agent-graph-view__title">Agent Graph Builder</h2>
-        </div>
-        <div className="agent-graph-view__header-right">
-          <span className="agent-graph-view__node-count">
-            {nodes.length} node{nodes.length !== 1 ? 's' : ''}
-          </span>
-          <button
-            className="agent-graph-view__clear-btn"
-            onClick={onClearChat}
-            type="button"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="3 6 5 6 21 6" />
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-            </svg>
-            Clear
-          </button>
-        </div>
-      </header>
       <div className="agent-graph-view__body">
         <div className="agent-graph-view__canvas-section">
           <GraphCanvas
@@ -280,7 +255,7 @@ export default function AgentGraphView({ onBack, onClearChat, generateCompletion
           />
         </div>
         <div className="agent-graph-view__chat">
-          <div className="agent-graph-view__messages">
+          <div className="agent-graph-view__messages" ref={messagesRef}>
             {messages.length === 0 && (
               <p className="agent-graph-view__empty-msg">Type a message to run the graph.</p>
             )}
@@ -319,7 +294,24 @@ export default function AgentGraphView({ onBack, onClearChat, generateCompletion
                 disabled={sending || !inputValue.trim() || modelStatus !== 'loaded'}
                 type="button"
               >
-                {sending ? '...' : 'Send'}
+                {sending ? '...' : (
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13" />
+                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                  </svg>
+                )}
+                {!sending && 'Send'}
+              </button>
+              <button
+                className="agent-graph-view__clear-btn"
+                onClick={onClearChat}
+                type="button"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+                Clear
               </button>
             </div>
           </div>
