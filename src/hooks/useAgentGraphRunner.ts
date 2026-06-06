@@ -292,20 +292,6 @@ export function useAgentGraphRunner() {
       });
     };
 
-    if (mcpNode && mcpConfig) {
-      onTrace?.({
-        id: crypto.randomUUID(),
-        timestamp: Date.now(),
-        nodeId: mcpNode.id,
-        nodeLabel: 'System Message',
-        nodeType: 'system-message',
-        type: 'input',
-        description: mcpConfig.systemMessage,
-      });
-    }
-
-    addTrace(userQueryNode, 'output', userInput);
-
     const outputs = new Map<string, NodeOutputValue>();
     const handleOutputs = new Map<string, Map<string, NodeOutputValue>>();
     outputs.set(userQueryNode.id, userInput);

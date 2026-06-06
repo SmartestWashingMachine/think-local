@@ -221,11 +221,11 @@ export default function AgentGraphView({ onClearChat, generateCompletionStream, 
     if (!content || sending) return;
     setInputValue('');
     setSending(true);
-    setTraceEntries([]);
     setRightPaneTab('trace');
 
     const mcpNode = nodes.find((n) => (n.data as unknown as AgentNodeData).nodeType === 'mcp');
     let mcpConfig: { systemMessage: string; tools: ChatCompletionTool[]; executeTool: (name: string, args: Record<string, unknown>) => Promise<string> } | null = null;
+    let systemMessageContent = '';
     if (mcpNode) {
       const mcpData = mcpNode.data as unknown as AgentNodeData;
       const enabledToolTypes: MCPToolType[] = [];
@@ -233,17 +233,58 @@ export default function AgentGraphView({ onClearChat, generateCompletionStream, 
       if (mcpData.calculatorEnabled) enabledToolTypes.push('calculator');
       if (mcpData.sayOutLoudEnabled) enabledToolTypes.push('say-out-loud');
       if (mcpData.regexFilterEnabled) enabledToolTypes.push('regex-filter');
-      const systemMessage = (mcpData.systemMessage as string) || (enabledToolTypes.length > 0 ? generateSystemMessage(enabledToolTypes) : '');
+      systemMessageContent = (mcpData.systemMessage as string) || (enabledToolTypes.length > 0 ? generateSystemMessage(enabledToolTypes) : '');
       if (enabledToolTypes.length > 0) {
         mcpConfig = {
-          systemMessage,
+          systemMessage: systemMessageContent,
           tools: getToolDefinitions(enabledToolTypes),
           executeTool,
         };
       }
     }
 
-    const collected: TraceEntry[] = [];
+    const preview = (val: string, max = 200) =>
+      val.length > max ? val.slice(0, max) + '...' : val;
+
+    const initialEntries: TraceEntry[] = [];
+
+    if (mcpNode && mcpConfig && systemMessageContent) {
+      initialEntries.push({
+        id: crypto.randomUUID(),
+        timestamp: Date.now(),
+        nodeId: mcpNode.id,
+        nodeLabel: 'System Message',
+        nodeType: 'system-message',
+        type: 'input',
+        description: systemMessageContent,
+      });
+    }
+
+    for (const msg of messages) {
+      initialEntries.push({
+        id: crypto.randomUUID(),
+        timestamp: msg.createdAt,
+        nodeId: 'chat-history',
+        nodeLabel: msg.role === 'user' ? 'User' : 'Assistant',
+        nodeType: msg.role === 'user' ? 'user-query' : 'chat-message',
+        type: msg.role === 'user' ? 'input' : 'output',
+        description: preview(msg.content),
+      });
+    }
+
+    initialEntries.push({
+      id: crypto.randomUUID(),
+      timestamp: Date.now(),
+      nodeId: 'chat-history',
+      nodeLabel: 'User',
+      nodeType: 'user-query',
+      type: 'input',
+      description: preview(content),
+    });
+
+    setTraceEntries(initialEntries);
+
+    const collected: TraceEntry[] = [...initialEntries];
     try {
       await sendMessage(content, async (_history, onToken, setAssistantContent) => {
         const result = await executeGraph(
@@ -261,7 +302,7 @@ export default function AgentGraphView({ onClearChat, generateCompletionStream, 
       setSending(false);
       inputRef.current?.focus();
     }
-  }, [inputValue, sending, sendMessage, nodes, edges, generateCompletionStream, generateCompletionWithTools, executeGraph, executeTool, getToolDefinitions]);
+  }, [inputValue, sending, sendMessage, nodes, edges, messages, generateCompletionStream, generateCompletionWithTools, executeGraph, executeTool, getToolDefinitions]);
 
   function formatTime(ts: number): string {
     return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
