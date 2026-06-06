@@ -242,10 +242,11 @@ describe('useConversations', () => {
       result.current.createConversation();
     });
 
-    const onStream = vi.fn(async (messages, onToken) => {
+    const onStream = vi.fn(async (messages, onToken, setAssistantContent) => {
       expect(messages).toHaveLength(1);
       expect(messages[0].role).toBe('user');
       expect(messages[0].content).toBe('Hello AI!');
+      setAssistantContent('');
       onToken('Hello');
       onToken(', human');
       onToken('!');
@@ -265,7 +266,7 @@ describe('useConversations', () => {
     expect(onStream).toHaveBeenCalledTimes(1);
   });
 
-  it('falls back to dummy response when onStream throws', async () => {
+  it('does not create an assistant message when onStream throws before setAssistantContent', async () => {
     const { result } = renderHook(() => useConversations());
 
     act(() => {
@@ -281,8 +282,7 @@ describe('useConversations', () => {
     });
 
     const conv = result.current.activeConversation!;
-    expect(conv.messages).toHaveLength(2);
-    expect(conv.messages[1].role).toBe('assistant');
-    expect(conv.messages[1].content).toBe(DUMMY_RESPONSE);
+    expect(conv.messages).toHaveLength(1);
+    expect(conv.messages[0].role).toBe('user');
   });
 });

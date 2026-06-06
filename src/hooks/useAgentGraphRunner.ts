@@ -20,6 +20,7 @@ interface NodeHandlerContext {
     onToken: (token: string) => void,
   ) => Promise<string>;
   onToken: (token: string) => void;
+  setAssistantContent?: (content: string) => void;
 }
 
 type NodeHandler = (ctx: NodeHandlerContext) => Promise<NodeOutputValue>;
@@ -70,12 +71,22 @@ function preview(val: string, max = 200): string {
   return val.length > max ? val.slice(0, max) + '...' : val;
 }
 
-const llmHandler: NodeHandler = async ({ firstStr, nodeData, generateCompletionStream, onToken }) => {
+const llmHandler: NodeHandler = async ({ firstStr, nodeData, generateCompletionStream, onToken, setAssistantContent }) => {
   const messageTemplate = (nodeData.message as string) ?? '{text}';
   const prompt = messageTemplate.replace('{text}', firstStr);
+  const streamOutput = (nodeData.streamOutput as boolean) ?? false;
+
+  if (streamOutput) {
+    setAssistantContent?.('');
+    return await generateCompletionStream(
+      [{ role: 'user', content: prompt }],
+      onToken,
+    );
+  }
+
   return await generateCompletionStream(
     [{ role: 'user', content: prompt }],
-    onToken,
+    () => {},
   );
 };
 
@@ -152,7 +163,10 @@ const ifClosestDocumentHandler: NodeHandler = async ({ firstStr, nodeData }) => 
   return conditionMet ? firstStr : null;
 };
 
-const chatMessageHandler: NodeHandler = async ({ firstStr }) => firstStr;
+const chatMessageHandler: NodeHandler = async ({ firstStr, setAssistantContent }) => {
+  setAssistantContent?.(firstStr);
+  return firstStr;
+};
 
 const andHandler: NodeHandler = async ({ incomingEdges, outputs, handleOutputs }) => {
   const conditionEdges = incomingEdges.filter((e) => e.targetHandle === 'conditions');
@@ -212,6 +226,7 @@ export function useAgentGraphRunner() {
       onToken: (token: string) => void,
     ) => Promise<string>,
     onToken: (token: string) => void,
+    setAssistantContent?: (content: string) => void,
     onTrace?: (entry: TraceEntry) => void,
   ): Promise<string> => {
     const userQueryNode = nodes.find(
@@ -296,6 +311,7 @@ export function useAgentGraphRunner() {
           edges,
           generateCompletionStream,
           onToken,
+          setAssistantContent,
         });
       } catch (err) {
         console.warn(`[AgentGraph] Handler for "${nodeType}" failed:`, err);

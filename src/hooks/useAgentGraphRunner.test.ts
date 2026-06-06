@@ -34,6 +34,7 @@ function createMockNodes(types: string[]): Node[] {
       threshold: 0.7,
       joinString: '\n',
       inputOrder: [],
+      streamOutput: false,
     },
   })) as unknown as Node[];
 }
@@ -55,6 +56,7 @@ function createEdges(nodeIds: string[], sourceHandle = 'output'): Edge[] {
 describe('useAgentGraphRunner', () => {
   const generateCompletionStream = vi.fn(async () => 'LLM response');
   const onToken = vi.fn();
+  const setAssistantContent = vi.fn();
   const onTrace = vi.fn();
 
   beforeEach(() => {
@@ -74,7 +76,7 @@ describe('useAgentGraphRunner', () => {
       const edges = createEdges(nodes.map((n) => n.id));
       const { result } = renderHook(() => useAgentGraphRunner());
 
-      const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, onTrace);
+      const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, setAssistantContent, onTrace);
 
       expect(mockGenerateEmbedding).toHaveBeenCalledWith('test query');
       expect(mockVectorSearch).toHaveBeenCalledWith([0.1, 0.2, 0.3], 3);
@@ -89,7 +91,7 @@ describe('useAgentGraphRunner', () => {
       const edges = createEdges(nodes.map((n) => n.id));
       const { result } = renderHook(() => useAgentGraphRunner());
 
-      const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, onTrace);
+      const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, setAssistantContent, onTrace);
 
       expect(output).toBe('');
     });
@@ -101,7 +103,7 @@ describe('useAgentGraphRunner', () => {
       const edges = createEdges(nodes.map((n) => n.id));
       const { result } = renderHook(() => useAgentGraphRunner());
 
-      const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, onTrace);
+      const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, setAssistantContent, onTrace);
 
       expect(output).toBe('');
     });
@@ -121,7 +123,7 @@ describe('useAgentGraphRunner', () => {
       const edges = createEdges(nodes.map((n) => n.id));
       const { result } = renderHook(() => useAgentGraphRunner());
 
-      const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, onTrace);
+      const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, setAssistantContent, onTrace);
 
       expect(output).toBe('chunk one\nchunk two\nchunk three');
     });
@@ -138,7 +140,7 @@ describe('useAgentGraphRunner', () => {
       const edges = createEdges(nodes.map((n) => n.id));
       const { result } = renderHook(() => useAgentGraphRunner());
 
-      const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, onTrace);
+      const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, setAssistantContent, onTrace);
 
       expect(output).toBe('chunk one, chunk two');
     });
@@ -154,7 +156,7 @@ describe('useAgentGraphRunner', () => {
       const edges = createEdges(nodes.map((n) => n.id));
       const { result } = renderHook(() => useAgentGraphRunner());
 
-      const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, onTrace);
+      const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, setAssistantContent, onTrace);
 
       expect(output).toBe('only chunk');
     });
@@ -176,12 +178,12 @@ describe('useAgentGraphRunner', () => {
       nodes[3].data = { ...nodes[3].data, joinString: ' | ' };
       const { result } = renderHook(() => useAgentGraphRunner());
 
-      const output = await result.current.executeGraph(nodes, edges, 'ignored', generateCompletionStream, onToken, onTrace);
+      const output = await result.current.executeGraph(nodes, edges, 'ignored', generateCompletionStream, onToken, setAssistantContent, onTrace);
 
       expect(generateCompletionStream).toHaveBeenCalledTimes(1);
       expect(generateCompletionStream).toHaveBeenCalledWith(
         [{ role: 'user', content: 'ignored' }],
-        onToken,
+        expect.any(Function),
       );
       expect(output).toBe('LLM response | RAG item');
     });
@@ -204,7 +206,7 @@ describe('useAgentGraphRunner', () => {
       nodes[3].data = { ...nodes[3].data, joinString: ' | ', inputOrder: ['e-rag-sj', 'e-llm-sj'] };
       const { result } = renderHook(() => useAgentGraphRunner());
 
-      const output = await result.current.executeGraph(nodes, edges, 'ignored', generateCompletionStream, onToken, onTrace);
+      const output = await result.current.executeGraph(nodes, edges, 'ignored', generateCompletionStream, onToken, setAssistantContent, onTrace);
 
       expect(output).toBe('RAG item | LLM response');
     });
@@ -216,7 +218,7 @@ describe('useAgentGraphRunner', () => {
       const edges = createEdges(nodes.map((n) => n.id));
       const { result } = renderHook(() => useAgentGraphRunner());
 
-      const output = await result.current.executeGraph(nodes, edges, 'hello', generateCompletionStream, onToken, onTrace);
+      const output = await result.current.executeGraph(nodes, edges, 'hello', generateCompletionStream, onToken, setAssistantContent, onTrace);
 
       expect(output).toBe('hello');
     });
@@ -227,7 +229,7 @@ describe('useAgentGraphRunner', () => {
       const edges = createEdges(nodes.map((n) => n.id));
       const { result } = renderHook(() => useAgentGraphRunner());
 
-      const output = await result.current.executeGraph(nodes, edges, 'world', generateCompletionStream, onToken, onTrace);
+      const output = await result.current.executeGraph(nodes, edges, 'world', generateCompletionStream, onToken, setAssistantContent, onTrace);
 
       expect(output).toBe('Prefix: world');
     });
@@ -238,7 +240,7 @@ describe('useAgentGraphRunner', () => {
       const edges = createEdges(nodes.map((n) => n.id));
       const { result } = renderHook(() => useAgentGraphRunner());
 
-      const output = await result.current.executeGraph(nodes, edges, 'anything', generateCompletionStream, onToken, onTrace);
+      const output = await result.current.executeGraph(nodes, edges, 'anything', generateCompletionStream, onToken, setAssistantContent, onTrace);
 
       expect(output).toBe('static text');
     });
@@ -251,7 +253,7 @@ describe('useAgentGraphRunner', () => {
       const edges = createEdges(nodes.map((n) => n.id), 'true');
       const { result } = renderHook(() => useAgentGraphRunner());
 
-      const output = await result.current.executeGraph(nodes, edges, 'hello world', generateCompletionStream, onToken, onTrace);
+      const output = await result.current.executeGraph(nodes, edges, 'hello world', generateCompletionStream, onToken, setAssistantContent, onTrace);
 
       expect(output).toBe('hello world');
     });
@@ -262,7 +264,7 @@ describe('useAgentGraphRunner', () => {
       const edges = createEdges(nodes.map((n) => n.id), 'true');
       const { result } = renderHook(() => useAgentGraphRunner());
 
-      const output = await result.current.executeGraph(nodes, edges, 'hello world', generateCompletionStream, onToken, onTrace);
+      const output = await result.current.executeGraph(nodes, edges, 'hello world', generateCompletionStream, onToken, setAssistantContent, onTrace);
 
       expect(output).toBe('');
     });
@@ -273,7 +275,7 @@ describe('useAgentGraphRunner', () => {
       const edges = createEdges(nodes.map((n) => n.id), 'true');
       const { result } = renderHook(() => useAgentGraphRunner());
 
-      const output = await result.current.executeGraph(nodes, edges, 'hello World', generateCompletionStream, onToken, onTrace);
+      const output = await result.current.executeGraph(nodes, edges, 'hello World', generateCompletionStream, onToken, setAssistantContent, onTrace);
 
       expect(output).toBe('hello World');
     });
@@ -284,7 +286,7 @@ describe('useAgentGraphRunner', () => {
       const edges = createEdges(nodes.map((n) => n.id), 'true');
       const { result } = renderHook(() => useAgentGraphRunner());
 
-      const output = await result.current.executeGraph(nodes, edges, 'hello world', generateCompletionStream, onToken, onTrace);
+      const output = await result.current.executeGraph(nodes, edges, 'hello world', generateCompletionStream, onToken, setAssistantContent, onTrace);
 
       expect(output).toBe('');
     });
@@ -302,7 +304,7 @@ describe('useAgentGraphRunner', () => {
       const edges = createEdges(nodes.map((n) => n.id), 'true');
       const { result } = renderHook(() => useAgentGraphRunner());
 
-      const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, onTrace);
+      const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, setAssistantContent, onTrace);
 
       expect(output).toBe('test query');
     });
@@ -318,7 +320,7 @@ describe('useAgentGraphRunner', () => {
       const edges = createEdges(nodes.map((n) => n.id), 'true');
       const { result } = renderHook(() => useAgentGraphRunner());
 
-      const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, onTrace);
+      const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, setAssistantContent, onTrace);
 
       expect(output).toBe('');
     });
@@ -331,7 +333,7 @@ describe('useAgentGraphRunner', () => {
       const edges = createEdges(nodes.map((n) => n.id), 'true');
       const { result } = renderHook(() => useAgentGraphRunner());
 
-      const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, onTrace);
+      const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, setAssistantContent, onTrace);
 
       expect(output).toBe('');
     });
@@ -345,7 +347,7 @@ describe('useAgentGraphRunner', () => {
       const edges = createEdges(nodes.map((n) => n.id), 'true');
       const { result } = renderHook(() => useAgentGraphRunner());
 
-      const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, onTrace);
+      const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, setAssistantContent, onTrace);
 
       expect(output).toBe('');
     });
@@ -360,7 +362,7 @@ describe('useAgentGraphRunner', () => {
     const edges = createEdges(nodes.map((n) => n.id), 'true');
     const { result } = renderHook(() => useAgentGraphRunner());
 
-    const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, onTrace);
+    const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, setAssistantContent, onTrace);
 
     expect(generateCompletionStream).toHaveBeenCalledTimes(1);
     expect(output).toBe('');
@@ -384,7 +386,7 @@ describe('useAgentGraphRunner', () => {
     ]);
     const { result } = renderHook(() => useAgentGraphRunner());
 
-    const output = await result.current.executeGraph(nodes, edges, 'test', generateCompletionStream, onToken, onTrace);
+    const output = await result.current.executeGraph(nodes, edges, 'test', generateCompletionStream, onToken, setAssistantContent, onTrace);
 
     expect(output).toBe('surviving chunk');
   });
@@ -403,7 +405,7 @@ describe('useAgentGraphRunner', () => {
       ] as Edge[];
       const { result } = renderHook(() => useAgentGraphRunner());
 
-      const output = await result.current.executeGraph(nodes, edges, 'test', generateCompletionStream, onToken, onTrace);
+      const output = await result.current.executeGraph(nodes, edges, 'test', generateCompletionStream, onToken, setAssistantContent, onTrace);
 
       expect(generateCompletionStream).toHaveBeenCalledTimes(3);
       expect(output).toBe('LLM response');
@@ -421,7 +423,7 @@ describe('useAgentGraphRunner', () => {
       ] as Edge[];
       const { result } = renderHook(() => useAgentGraphRunner());
 
-      const output = await result.current.executeGraph(nodes, edges, 'hello', generateCompletionStream, onToken, onTrace);
+      const output = await result.current.executeGraph(nodes, edges, 'hello', generateCompletionStream, onToken, setAssistantContent, onTrace);
 
       expect(generateCompletionStream).toHaveBeenCalledTimes(1);
       expect(output).toBe('');
@@ -436,7 +438,7 @@ describe('useAgentGraphRunner', () => {
       ] as Edge[];
       const { result } = renderHook(() => useAgentGraphRunner());
 
-      const output = await result.current.executeGraph(nodes, edges, 'test', generateCompletionStream, onToken, onTrace);
+      const output = await result.current.executeGraph(nodes, edges, 'test', generateCompletionStream, onToken, setAssistantContent, onTrace);
 
       expect(output).toBe('');
     });
@@ -454,7 +456,7 @@ describe('useAgentGraphRunner', () => {
       ] as Edge[];
       const { result } = renderHook(() => useAgentGraphRunner());
 
-      const output = await result.current.executeGraph(nodes, edges, 'test', generateCompletionStream, onToken, onTrace);
+      const output = await result.current.executeGraph(nodes, edges, 'test', generateCompletionStream, onToken, setAssistantContent, onTrace);
 
       expect(generateCompletionStream).toHaveBeenCalledTimes(2);
       expect(output).toBe('LLM response');
@@ -472,7 +474,7 @@ describe('useAgentGraphRunner', () => {
       ] as Edge[];
       const { result } = renderHook(() => useAgentGraphRunner());
 
-      const output = await result.current.executeGraph(nodes, edges, 'hello', generateCompletionStream, onToken, onTrace);
+      const output = await result.current.executeGraph(nodes, edges, 'hello', generateCompletionStream, onToken, setAssistantContent, onTrace);
 
       expect(generateCompletionStream).toHaveBeenCalledTimes(1);
       expect(output).toBe('');

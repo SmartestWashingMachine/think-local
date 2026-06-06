@@ -66,7 +66,7 @@ interface AgentGraphViewProps {
   messages: Message[];
   sendMessage: (
     content: string,
-    onStream?: (messages: Message[], onToken: (token: string) => void) => Promise<string>,
+    onStream?: (messages: Message[], onToken: (token: string) => void, setAssistantContent: (content: string) => void) => Promise<string>,
   ) => Promise<void>;
   modelStatus: string;
 }
@@ -213,8 +213,8 @@ export default function AgentGraphView({ onClearChat, generateCompletionStream, 
     setRightPaneTab('trace');
     const collected: TraceEntry[] = [];
     try {
-      await sendMessage(content, async (_history, onToken) => {
-        const result = await executeGraph(nodes, edges, content, generateCompletionStream, onToken, (entry) => {
+      await sendMessage(content, async (_history, onToken, setAssistantContent) => {
+        const result = await executeGraph(nodes, edges, content, generateCompletionStream, onToken, setAssistantContent, (entry) => {
           collected.push(entry);
           setTraceEntries([...collected]);
         });

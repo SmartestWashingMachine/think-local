@@ -98,8 +98,9 @@ export const AGENT_NODE_DEFINITIONS: Record<AgentNodeType, AgentNodeDefinition> 
     ],
     properties: [
       { key: 'message', label: 'Message', type: 'text', placeholder: '{text}', description: 'Template for the LLM prompt. Use {text} to insert the input.' },
+      { key: 'streamOutput', label: 'Stream Output', type: 'boolean', description: 'When enabled, streams the LLM output token by token into the chat as it is generated.' },
     ],
-    defaults: { message: '{text}' },
+    defaults: { message: '{text}', streamOutput: false },
   },
   rag: {
     type: 'rag',

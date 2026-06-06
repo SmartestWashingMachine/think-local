@@ -58,7 +58,8 @@ export default function App() {
 
   const handleSendMessage = useCallback(
     async (content: string) => {
-      await sendMessage(content, async (history: Message[], onToken) => {
+      await sendMessage(content, async (history: Message[], onToken, setAssistantContent) => {
+        setAssistantContent('');
         return generateCompletionStream(
           history.map((m) => ({ role: m.role, content: m.content })),
           onToken,

@@ -94,7 +94,11 @@ export function useConversations() {
   const sendMessage = useCallback(
     async (
       content: string,
-      onStream?: (messages: Message[], onToken: (token: string) => void) => Promise<string>,
+      onStream?: (
+        messages: Message[],
+        onToken: (token: string) => void,
+        setAssistantContent: (content: string) => void,
+      ) => Promise<string>,
     ) => {
       if (!activeId || !activeConversation) return;
 
@@ -121,48 +125,81 @@ export function useConversations() {
         }),
       );
 
-      // Insert a placeholder assistant message for streaming
-      const assistantId = generateId();
-      setConversations((prev) =>
-        prev.map((c) => {
-          if (c.id !== activeId) return c;
-          return {
-            ...c,
-            messages: [...c.messages, { id: assistantId, role: 'assistant', content: '', createdAt: Date.now() }],
-          };
-        }),
-      );
-
       if (onStream) {
-        try {
-          await onStream(messagesAfterUser, (token) => {
-            // Update the placeholder message content incrementally
+        let currentAssistantId: string | null = null;
+
+        const setAssistantContent = (content: string) => {
+          if (!currentAssistantId) {
+            const id = generateId();
+            currentAssistantId = id;
+            setConversations((prev) =>
+              prev.map((c) => {
+                if (c.id !== activeId) return c;
+                return {
+                  ...c,
+                  messages: [...c.messages, { id, role: 'assistant', content, createdAt: Date.now() }],
+                };
+              }),
+            );
+          } else {
             setConversations((prev) =>
               prev.map((c) => {
                 if (c.id !== activeId) return c;
                 return {
                   ...c,
                   messages: c.messages.map((m) =>
-                    m.id === assistantId ? { ...m, content: (m.content ?? '') + token } : m,
+                    m.id === currentAssistantId ? { ...m, content } : m,
                   ),
                 };
               }),
             );
-          });
-        } catch {
+          }
+        };
+
+        const onToken = (token: string) => {
+          if (!currentAssistantId) return;
           setConversations((prev) =>
             prev.map((c) => {
               if (c.id !== activeId) return c;
               return {
                 ...c,
                 messages: c.messages.map((m) =>
-                  m.id === assistantId ? { ...m, content: DUMMY_RESPONSE } : m,
+                  m.id === currentAssistantId ? { ...m, content: (m.content ?? '') + token } : m,
                 ),
               };
             }),
           );
+        };
+
+        try {
+          await onStream(messagesAfterUser, onToken, setAssistantContent);
+        } catch {
+          if (currentAssistantId) {
+            setConversations((prev) =>
+              prev.map((c) => {
+                if (c.id !== activeId) return c;
+                return {
+                  ...c,
+                  messages: c.messages.map((m) =>
+                    m.id === currentAssistantId ? { ...m, content: DUMMY_RESPONSE } : m,
+                  ),
+                };
+              }),
+            );
+          }
         }
       } else {
+        const assistantId = generateId();
+        setConversations((prev) =>
+          prev.map((c) => {
+            if (c.id !== activeId) return c;
+            return {
+              ...c,
+              messages: [...c.messages, { id: assistantId, role: 'assistant', content: '', createdAt: Date.now() }],
+            };
+          }),
+        );
+
         await new Promise((r) => setTimeout(r, 1000));
         setConversations((prev) =>
           prev.map((c) => {

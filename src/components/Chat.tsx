@@ -22,7 +22,7 @@ interface ChatProps {
   onSendMessage: (content: string) => Promise<void>;
   sendMessage: (
     content: string,
-    onStream?: (messages: Message[], onToken: (token: string) => void) => Promise<string>,
+    onStream?: (messages: Message[], onToken: (token: string) => void, setAssistantContent: (content: string) => void) => Promise<string>,
   ) => Promise<void>;
   clearMessages: () => void;
   generateCompletionStream: (
