@@ -11,7 +11,7 @@ function createTraceEntry(overrides: Partial<TraceEntry> = {}): TraceEntry {
     nodeLabel: 'LLM',
     nodeType: 'llm',
     type: 'input',
-    description: 'LLM Input: Hello world',
+    description: 'Hello world',
     ...overrides,
   };
 }
@@ -26,16 +26,15 @@ describe('TracePanel', () => {
 
   it('renders trace entries', () => {
     const entries = [
-      createTraceEntry({ id: '1', nodeLabel: 'User Query', type: 'output', description: 'User Query: Hello' }),
-      createTraceEntry({ id: '2', nodeLabel: 'LLM', type: 'input', description: 'LLM Input: Hello' }),
-      createTraceEntry({ id: '3', nodeLabel: 'LLM', type: 'output', description: 'LLM Output: Hi there' }),
+      createTraceEntry({ id: '1', nodeLabel: 'User Query', type: 'output', description: 'Hello' }),
+      createTraceEntry({ id: '2', nodeLabel: 'LLM', type: 'input', description: 'Hello' }),
+      createTraceEntry({ id: '3', nodeLabel: 'LLM', type: 'output', description: 'Hi there' }),
     ];
     render(<TracePanel entries={entries} />);
     expect(screen.getByText('User Query')).toBeInTheDocument();
     expect(screen.getAllByText('LLM')).toHaveLength(2);
-    expect(screen.getByText('User Query: Hello')).toBeInTheDocument();
-    expect(screen.getByText('LLM Input: Hello')).toBeInTheDocument();
-    expect(screen.getByText('LLM Output: Hi there')).toBeInTheDocument();
+    expect(screen.getAllByText('Hello')).toHaveLength(2);
+    expect(screen.getByText('Hi there')).toBeInTheDocument();
   });
 
   it('shows step count', () => {

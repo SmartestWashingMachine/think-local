@@ -71,7 +71,7 @@ export function useAgentGraphRunner() {
       });
     };
 
-    addTrace(userQueryNode, 'output', `User Query: ${userInput}`);
+    addTrace(userQueryNode, 'output', userInput);
 
     const outputs = new Map<string, NodeOutput>();
     outputs.set(userQueryNode.id, userInput);
@@ -84,7 +84,6 @@ export function useAgentGraphRunner() {
       const node = nodes.find((n) => n.id === nodeId)!;
       const nodeData = node.data as unknown as AgentNodeData;
       const nodeType = nodeData.nodeType;
-      const nodeDef = AGENT_NODE_DEFINITIONS[nodeType];
 
       const incomingEdges = edges.filter((e) => e.target === nodeId);
       const sourceOutputs: NodeOutput[] = incomingEdges.map(
@@ -96,20 +95,22 @@ export function useAgentGraphRunner() {
 
       if (successfulOutputs.length === 0) {
         outputs.set(nodeId, null);
-        addTrace(node, 'input', `${nodeDef?.label ?? nodeType} Input: (canceled)`);
-        addTrace(node, 'output', `${nodeDef?.label ?? nodeType} Output: (canceled)`);
+        addTrace(node, 'input', '(canceled)');
+        addTrace(node, 'output', '(canceled)');
         continue;
       }
 
       const firstStr = successfulOutputs.find((v) => typeof v === 'string') ?? '';
 
-      if (nodeType === 'string-joiner') {
-        const inputSummary = successfulOutputs
-          .map((v) => (typeof v === 'string' ? `"${preview(v)}"` : `[${v.length} items]`))
-          .join(', ');
-        addTrace(node, 'input', `${nodeDef?.label ?? nodeType} Inputs: ${inputSummary}`);
-      } else {
-        addTrace(node, 'input', `${nodeDef?.label ?? nodeType} Input: ${preview(firstStr)}`);
+      if (nodeType !== 'chat-message') {
+        if (nodeType === 'string-joiner') {
+          const inputSummary = successfulOutputs
+            .map((v) => (typeof v === 'string' ? `"${preview(v)}"` : v.map((item) => preview(item)).join('\n---\n')))
+            .join(', ');
+          addTrace(node, 'input', inputSummary);
+        } else {
+          addTrace(node, 'input', preview(firstStr));
+        }
       }
 
       let result: NodeOutput = null;
@@ -191,11 +192,11 @@ export function useAgentGraphRunner() {
       outputs.set(nodeId, result);
 
       if (result === null) {
-        addTrace(node, 'output', `${nodeDef?.label ?? nodeType} Output: (canceled)`);
+        addTrace(node, 'output', '(canceled)');
       } else if (typeof result === 'string') {
-        addTrace(node, 'output', `${nodeDef?.label ?? nodeType} Output: ${preview(result)}`);
+        addTrace(node, 'output', preview(result));
       } else {
-        addTrace(node, 'output', `${nodeDef?.label ?? nodeType} Output: [${result.length} items]`);
+        addTrace(node, 'output', result.map((item) => preview(item)).join('\n---\n'));
       }
     }
 
