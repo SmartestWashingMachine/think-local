@@ -126,6 +126,45 @@
   font-family: monospace;
 }
 
+.inspector__input-order {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.inspector__input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 4px;
+  cursor: grab;
+  user-select: none;
+}
+
+.inspector__input-row:active {
+  cursor: grabbing;
+}
+
+.inspector__input-row--dragging {
+  opacity: 0.4;
+  border-color: var(--accent, #4fc3f7);
+}
+
+.inspector__input-grip {
+  font-size: 14px;
+  color: var(--text-muted, #666);
+  line-height: 1;
+}
+
+.inspector__input-label {
+  font-size: 13px;
+  color: var(--text, #ccc);
+  flex: 1;
+}
+
 .inspector__name-input {
   font-size: 16px;
   font-weight: 700;

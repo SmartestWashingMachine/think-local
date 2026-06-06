@@ -1,5 +1,5 @@
-import { useCallback } from 'react';
-import type { Node } from '@xyflow/react';
+import { useCallback, useState } from 'react';
+import type { Node, Edge } from '@xyflow/react';
 import {
   AGENT_NODE_DEFINITIONS,
   AGENT_NODE_CATEGORIES,
@@ -10,10 +10,14 @@ import './AgentNodeInspector.css';
 
 interface AgentNodeInspectorProps {
   node: Node | null;
+  edges: Edge[];
+  nodes: Node[];
   onUpdateNodeData: (nodeId: string, newData: Partial<AgentNodeData>) => void;
 }
 
-export default function AgentNodeInspector({ node, onUpdateNodeData }: AgentNodeInspectorProps) {
+export default function AgentNodeInspector({ node, edges, nodes, onUpdateNodeData }: AgentNodeInspectorProps) {
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+
   const handleLabelChange = useCallback(
     (nodeId: string, e: React.ChangeEvent<HTMLInputElement>) => {
       onUpdateNodeData(nodeId, { label: e.target.value });
@@ -39,6 +43,50 @@ export default function AgentNodeInspector({ node, onUpdateNodeData }: AgentNode
   const data = node.data as unknown as AgentNodeData;
   const def = AGENT_NODE_DEFINITIONS[data.nodeType];
   const category = AGENT_NODE_CATEGORIES.find((c) => c.key === def.category);
+  const isStringJoiner = data.nodeType === 'string-joiner';
+
+  const incomingEdges = isStringJoiner
+    ? edges.filter((e) => e.target === node.id && e.targetHandle === 'input')
+    : [];
+
+  const currentOrder = (data.inputOrder as string[]) ?? [];
+  const sortedEdges = [...incomingEdges].sort((a, b) => {
+    const aIdx = currentOrder.indexOf(a.id);
+    const bIdx = currentOrder.indexOf(b.id);
+    return (aIdx === -1 ? Infinity : aIdx) - (bIdx === -1 ? Infinity : bIdx);
+  });
+
+  const getSourceLabel = (edge: Edge): string => {
+    const sourceNode = nodes.find((n) => n.id === edge.source);
+    if (!sourceNode) return 'Unknown';
+    return (sourceNode.data as unknown as AgentNodeData).label ?? 'Unknown';
+  };
+
+  const handleDragStart = (index: number) => {
+    setDragIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (dropIndex: number) => {
+    if (dragIndex === null || dragIndex === dropIndex) {
+      setDragIndex(null);
+      return;
+    }
+
+    const ids = sortedEdges.map((e) => e.id);
+    const [moved] = ids.splice(dragIndex, 1);
+    ids.splice(dropIndex, 0, moved);
+
+    onUpdateNodeData(node.id, { inputOrder: ids } as Partial<AgentNodeData>);
+    setDragIndex(null);
+  };
+
+  const handleDragEnd = () => {
+    setDragIndex(null);
+  };
 
   return (
     <div className="inspector">
@@ -67,6 +115,32 @@ export default function AgentNodeInspector({ node, onUpdateNodeData }: AgentNode
           onChange={handlePropertyChange}
         />
       ))}
+
+      {isStringJoiner && (
+        <div className="inspector__section">
+          <h4 className="inspector__section-title">Connected Inputs</h4>
+          <p className="inspector__text inspector__text--muted">Drag to reorder the input edges. Order determines how inputs are collated.</p>
+          <div className="inspector__input-order">
+            {sortedEdges.length === 0 && (
+              <p className="inspector__text inspector__text--muted">No connected inputs</p>
+            )}
+            {sortedEdges.map((edge, index) => (
+              <div
+                key={edge.id}
+                className={`inspector__input-row ${dragIndex === index ? 'inspector__input-row--dragging' : ''}`}
+                draggable
+                onDragStart={() => handleDragStart(index)}
+                onDragOver={handleDragOver}
+                onDrop={() => handleDrop(index)}
+                onDragEnd={handleDragEnd}
+              >
+                <span className="inspector__input-grip">⠿</span>
+                <span className="inspector__input-label">{getSourceLabel(edge)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="inspector__section">
         <h4 className="inspector__section-title">Handles</h4>

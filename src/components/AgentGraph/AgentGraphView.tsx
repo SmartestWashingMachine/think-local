@@ -223,6 +223,8 @@ export default function AgentGraphView({ onBack, generateCompletionStream, messa
           />
           <RightPane
             selectedNode={selectedNode}
+            edges={edges}
+            nodes={nodes}
             activeTab={rightPaneTab}
             onTabChange={setRightPaneTab}
             onAddNode={onAddNode}

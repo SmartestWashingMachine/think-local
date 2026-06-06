@@ -1,4 +1,4 @@
-import type { Node } from '@xyflow/react';
+import type { Node, Edge } from '@xyflow/react';
 import type { AgentNodeData, AgentNodeType, TraceEntry } from '../../types/agentGraph';
 import AgentNodeInspector from './AgentNodeInspector';
 import AgentNodePalette from './AgentNodePalette';
@@ -9,6 +9,8 @@ type RightPaneTab = 'info' | 'add' | 'trace';
 
 interface RightPaneProps {
   selectedNode: Node | null;
+  edges: Edge[];
+  nodes: Node[];
   activeTab: RightPaneTab;
   onTabChange: (tab: RightPaneTab) => void;
   onAddNode: (type: AgentNodeType) => void;
@@ -18,6 +20,8 @@ interface RightPaneProps {
 
 export default function RightPane({
   selectedNode,
+  edges,
+  nodes,
   activeTab,
   onTabChange,
   onAddNode,
@@ -53,6 +57,8 @@ export default function RightPane({
         {activeTab === 'info' ? (
           <AgentNodeInspector
             node={selectedNode}
+            edges={edges}
+            nodes={nodes}
             onUpdateNodeData={onUpdateNodeData}
           />
         ) : activeTab === 'add' ? (

@@ -3,6 +3,7 @@ export type AgentNodeType =
   | 'llm'
   | 'rag'
   | 'string-joiner'
+  | 'format-string'
   | 'if-string-contains'
   | 'if-closest-document'
   | 'chat-message';
@@ -17,6 +18,7 @@ export interface HandleConfig {
   type: 'source' | 'target';
   position: 'left' | 'right' | 'top' | 'bottom';
   valueType: ValueType;
+  acceptsTypes?: ValueType[];
 }
 
 interface BasePropertyDefinition {
@@ -120,13 +122,28 @@ export const AGENT_NODE_DEFINITIONS: Record<AgentNodeType, AgentNodeDefinition> 
     color: '#2196f3',
     description: 'Joins multiple strings into one',
     handles: [
-      { id: 'input', label: 'Strings', type: 'target', position: 'top', valueType: 'list<string>' },
+      { id: 'input', label: 'Strings', type: 'target', position: 'top', valueType: 'list<string>', acceptsTypes: ['string', 'list<string>'] },
       { id: 'output', label: 'Output', type: 'source', position: 'bottom', valueType: 'string' },
     ],
     properties: [
       { key: 'joinString', label: 'Join String', type: 'text', placeholder: '\\n', description: 'The string to join each item with' },
     ],
-    defaults: { joinString: '\n' },
+    defaults: { joinString: '\n', inputOrder: [] },
+  },
+  'format-string': {
+    type: 'format-string',
+    category: 'process',
+    label: 'Format String',
+    color: '#2196f3',
+    description: 'Formats a string using a template',
+    handles: [
+      { id: 'input', label: 'Input', type: 'target', position: 'top', valueType: 'string' },
+      { id: 'output', label: 'Output', type: 'source', position: 'bottom', valueType: 'string' },
+    ],
+    properties: [
+      { key: 'format', label: 'Format', type: 'text', placeholder: '{text}', description: 'Template for the output string. Use {text} to insert the input.' },
+    ],
+    defaults: { format: '{text}' },
   },
   'if-string-contains': {
     type: 'if-string-contains',

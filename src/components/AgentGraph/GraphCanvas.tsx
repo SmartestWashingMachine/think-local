@@ -69,6 +69,9 @@ function GraphCanvasInner({
       const targetHandleCfg = targetDef.handles.find((h) => h.id === connection.targetHandle);
       if (!sourceHandleCfg || !targetHandleCfg) return false;
 
+      if (targetHandleCfg.acceptsTypes) {
+        return targetHandleCfg.acceptsTypes.includes(sourceHandleCfg.valueType);
+      }
       return sourceHandleCfg.valueType === targetHandleCfg.valueType;
     },
     [nodes],

@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { useState } from 'react';
-import type { Node } from '@xyflow/react';
+import type { Node, Edge } from '@xyflow/react';
 import type { AgentNodeData } from '../../types/agentGraph';
 import AgentNodeInspector from './AgentNodeInspector';
 
@@ -16,9 +16,29 @@ function createMockNode(overrides: Partial<AgentNodeData> = {}): Node {
       nodeType: 'string-joiner',
       label: 'My Joiner',
       joinString: '\n',
+      inputOrder: [],
       ...overrides,
     } as unknown as AgentNodeData,
   } as unknown as Node;
+}
+
+function createMockEdges(sourceIds: string[] = []): Edge[] {
+  return sourceIds.map((src, i) => ({
+    id: `edge-${i}`,
+    source: src,
+    target: 'test-node-1',
+    sourceHandle: 'output',
+    targetHandle: 'input',
+  })) as unknown as Edge[];
+}
+
+function createMockNodes(labels: Record<string, string> = {}): Node[] {
+  return Object.entries(labels).map(([id, label]) => ({
+    id,
+    type: 'process',
+    position: { x: 0, y: 0 },
+    data: { nodeType: 'llm', label } as unknown as AgentNodeData,
+  })) as unknown as Node[];
 }
 
 describe('AgentNodeInspector', () => {
@@ -29,7 +49,7 @@ describe('AgentNodeInspector', () => {
   });
 
   it('shows placeholder when no node is selected', () => {
-    render(<AgentNodeInspector node={null} onUpdateNodeData={onUpdateNodeData} />);
+    render(<AgentNodeInspector node={null} edges={[]} nodes={[]} onUpdateNodeData={onUpdateNodeData} />);
     expect(
       screen.getByText('Select a node on the canvas to inspect its properties.'),
     ).toBeInTheDocument();
@@ -37,13 +57,13 @@ describe('AgentNodeInspector', () => {
 
   it('renders the label input with the node label', () => {
     const node = createMockNode();
-    render(<AgentNodeInspector node={node} onUpdateNodeData={onUpdateNodeData} />);
+    render(<AgentNodeInspector node={node} edges={[]} nodes={[]} onUpdateNodeData={onUpdateNodeData} />);
     expect(screen.getByDisplayValue('My Joiner')).toBeInTheDocument();
   });
 
   it('calls onUpdateNodeData when label changes', () => {
     const node = createMockNode();
-    render(<AgentNodeInspector node={node} onUpdateNodeData={onUpdateNodeData} />);
+    render(<AgentNodeInspector node={node} edges={[]} nodes={[]} onUpdateNodeData={onUpdateNodeData} />);
 
     const input = screen.getByDisplayValue('My Joiner');
     fireEvent.change(input, { target: { value: 'New Name' } });
@@ -53,13 +73,13 @@ describe('AgentNodeInspector', () => {
 
   it('renders property fields for the node type', () => {
     const node = createMockNode();
-    render(<AgentNodeInspector node={node} onUpdateNodeData={onUpdateNodeData} />);
+    render(<AgentNodeInspector node={node} edges={[]} nodes={[]} onUpdateNodeData={onUpdateNodeData} />);
     expect(screen.getByText('Join String')).toBeInTheDocument();
   });
 
   it('calls onUpdateNodeData when a text property changes', () => {
     const node = createMockNode();
-    render(<AgentNodeInspector node={node} onUpdateNodeData={onUpdateNodeData} />);
+    render(<AgentNodeInspector node={node} edges={[]} nodes={[]} onUpdateNodeData={onUpdateNodeData} />);
 
     const inputs = screen.getAllByRole('textbox');
     const joinInput = inputs[1];
@@ -71,12 +91,12 @@ describe('AgentNodeInspector', () => {
   it('reflects updated label when the node prop changes', () => {
     const node = createMockNode();
     const { rerender } = render(
-      <AgentNodeInspector node={node} onUpdateNodeData={onUpdateNodeData} />,
+      <AgentNodeInspector node={node} edges={[]} nodes={[]} onUpdateNodeData={onUpdateNodeData} />,
     );
     expect(screen.getByDisplayValue('My Joiner')).toBeInTheDocument();
 
     const updatedNode = createMockNode({ label: 'Renamed Joiner' });
-    rerender(<AgentNodeInspector node={updatedNode} onUpdateNodeData={onUpdateNodeData} />);
+    rerender(<AgentNodeInspector node={updatedNode} edges={[]} nodes={[]} onUpdateNodeData={onUpdateNodeData} />);
 
     expect(screen.getByDisplayValue('Renamed Joiner')).toBeInTheDocument();
   });
@@ -84,14 +104,14 @@ describe('AgentNodeInspector', () => {
   it('reflects updated property data when the node prop changes', () => {
     const node = createMockNode();
     const { rerender } = render(
-      <AgentNodeInspector node={node} onUpdateNodeData={onUpdateNodeData} />,
+      <AgentNodeInspector node={node} edges={[]} nodes={[]} onUpdateNodeData={onUpdateNodeData} />,
     );
     expect(screen.getByDisplayValue('My Joiner')).toBeInTheDocument();
     expect(screen.getByText('Join String')).toBeInTheDocument();
 
     const updatedNode = createMockNode({ joinString: ', ' });
     rerender(
-      <AgentNodeInspector node={updatedNode} onUpdateNodeData={onUpdateNodeData} />,
+      <AgentNodeInspector node={updatedNode} edges={[]} nodes={[]} onUpdateNodeData={onUpdateNodeData} />,
     );
 
     const inputs = screen.getAllByRole('textbox');
@@ -112,7 +132,7 @@ describe('AgentNodeInspector', () => {
       } as unknown as AgentNodeData,
     } as unknown as Node;
 
-    render(<AgentNodeInspector node={node} onUpdateNodeData={onUpdateNodeData} />);
+    render(<AgentNodeInspector node={node} edges={[]} nodes={[]} onUpdateNodeData={onUpdateNodeData} />);
     const checkbox = screen.getByRole('checkbox');
     expect(checkbox).toBeChecked();
   });
@@ -132,7 +152,7 @@ describe('AgentNodeInspector', () => {
       } as unknown as AgentNodeData,
     } as unknown as Node;
 
-    render(<AgentNodeInspector node={node} onUpdateNodeData={onUpdateNodeData} />);
+    render(<AgentNodeInspector node={node} edges={[]} nodes={[]} onUpdateNodeData={onUpdateNodeData} />);
     await user.click(screen.getByRole('checkbox'));
 
     expect(onUpdateNodeData).toHaveBeenCalledWith('test-node-2', { caseSensitive: false });
@@ -151,7 +171,7 @@ describe('AgentNodeInspector', () => {
       } as unknown as AgentNodeData,
     } as unknown as Node;
 
-    render(<AgentNodeInspector node={node} onUpdateNodeData={onUpdateNodeData} />);
+    render(<AgentNodeInspector node={node} edges={[]} nodes={[]} onUpdateNodeData={onUpdateNodeData} />);
     expect(screen.getByDisplayValue('0.7')).toBeInTheDocument();
   });
 
@@ -168,7 +188,7 @@ describe('AgentNodeInspector', () => {
       } as unknown as AgentNodeData,
     } as unknown as Node;
 
-    render(<AgentNodeInspector node={node} onUpdateNodeData={onUpdateNodeData} />);
+    render(<AgentNodeInspector node={node} edges={[]} nodes={[]} onUpdateNodeData={onUpdateNodeData} />);
     const input = screen.getByDisplayValue('0.7');
     fireEvent.change(input, { target: { value: '0.5' } });
 
@@ -189,7 +209,7 @@ describe('AgentNodeInspector', () => {
       } as unknown as AgentNodeData,
     } as unknown as Node;
 
-    render(<AgentNodeInspector node={node} onUpdateNodeData={onUpdateNodeData} />);
+    render(<AgentNodeInspector node={node} edges={[]} nodes={[]} onUpdateNodeData={onUpdateNodeData} />);
     const select = screen.getByRole('combobox');
     expect(select).toHaveValue('default');
   });
@@ -200,6 +220,8 @@ describe('AgentNodeInspector', () => {
       return (
         <AgentNodeInspector
           node={node}
+          edges={[]}
+          nodes={[]}
           onUpdateNodeData={(_id, data) => {
             if (node) {
               setNode({
@@ -214,5 +236,41 @@ describe('AgentNodeInspector', () => {
 
     render(<TestWrapper />);
     expect(screen.getByDisplayValue('My Joiner')).toBeInTheDocument();
+  });
+
+  describe('string-joiner connected inputs', () => {
+    it('shows connected input edges with source labels', () => {
+      const node = createMockNode();
+      const edges = createMockEdges(['src-1', 'src-2']);
+      const nodes = createMockNodes({ 'src-1': 'LLM Node', 'src-2': 'RAG Node' });
+      render(<AgentNodeInspector node={node} edges={edges} nodes={nodes} onUpdateNodeData={onUpdateNodeData} />);
+
+      expect(screen.getByText('Connected Inputs')).toBeInTheDocument();
+      expect(screen.getByText('LLM Node')).toBeInTheDocument();
+      expect(screen.getByText('RAG Node')).toBeInTheDocument();
+    });
+
+    it('shows muted text when no connected inputs', () => {
+      const node = createMockNode();
+      render(<AgentNodeInspector node={node} edges={[]} nodes={[]} onUpdateNodeData={onUpdateNodeData} />);
+
+      expect(screen.getByText('No connected inputs')).toBeInTheDocument();
+    });
+
+    it('does not show Connected Inputs section for non-string-joiner nodes', () => {
+      const node: Node = {
+        id: 'test-node-5',
+        type: 'process',
+        position: { x: 0, y: 0 },
+        selected: true,
+        data: {
+          nodeType: 'llm',
+          label: 'LLM',
+        } as unknown as AgentNodeData,
+      } as unknown as Node;
+
+      render(<AgentNodeInspector node={node} edges={[]} nodes={[]} onUpdateNodeData={onUpdateNodeData} />);
+      expect(screen.queryByText('Connected Inputs')).not.toBeInTheDocument();
+    });
   });
 });
