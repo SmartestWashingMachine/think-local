@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Wllama } from '@wllama/wllama/esm/index.js';
 import type { ModelInfo, ModelStatus } from '../ai/types';
+import { registerGenerateEmbedding } from '../ai/embeddings';
 import { saveEmbeddingModelId, getSavedEmbeddingModelId, parseModelId, formatModelId } from '../ai/models';
 import { WLLAMA_CONFIG_PATHS, buildHFDownloadUrl } from '../ai/config';
 
@@ -85,6 +86,10 @@ export function useEmbeddings() {
   const isModelLoaded = useCallback((): boolean => {
     return wllamaRef.current !== null && wllamaRef.current.isModelLoaded();
   }, []);
+
+  useEffect(() => {
+    registerGenerateEmbedding(generateEmbedding);
+  }, [generateEmbedding]);
 
   return {
     status,

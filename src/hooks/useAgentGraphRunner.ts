@@ -69,8 +69,12 @@ export function useAgentGraphRunner() {
         try {
           const embedding = await generateEmbedding(currentOutput);
           const results = vectorSearch(embedding, k);
+          if (results.length === 0) {
+            console.log(`[AgentGraph] RAG node "${nodeData.label}": vector search returned 0 results (k=${k})`);
+          }
           chunks = results.map((r) => r.document.content);
-        } catch {
+        } catch (err) {
+          console.warn(`[AgentGraph] RAG node "${nodeData.label}" failed:`, err);
           chunks = [];
         }
         currentOutput = chunks.join('\n\n---\n\n');
@@ -91,8 +95,9 @@ export function useAgentGraphRunner() {
           const results = vectorSearch(embedding, 1);
           const bestScore = results.length > 0 ? results[0].score : 0;
           conditionMet = bestScore >= threshold;
-        } catch {
-          // conditionMet stays false
+          console.log(`[AgentGraph] if-closest-document "${nodeData.label}": bestScore=${bestScore.toFixed(4)}, threshold=${threshold}, conditionMet=${conditionMet}`);
+        } catch (err) {
+          console.warn(`[AgentGraph] if-closest-document "${nodeData.label}" embedding failed:`, err);
         }
         if (!conditionMet) {
           currentOutput = '';

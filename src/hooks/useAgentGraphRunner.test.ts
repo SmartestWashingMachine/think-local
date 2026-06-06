@@ -9,6 +9,7 @@ const mockVectorSearch = vi.fn();
 
 vi.mock('../ai/embeddings', () => ({
   generateEmbedding: (...args: unknown[]) => mockGenerateEmbedding(...args),
+  registerGenerateEmbedding: vi.fn(),
 }));
 
 vi.mock('../ai/vectorStore', () => ({
