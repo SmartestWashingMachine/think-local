@@ -102,6 +102,62 @@ describe('useAgentGraphRunner', () => {
     });
   });
 
+  describe('string-joiner node', () => {
+    it('joins RAG chunks with default newline separator', async () => {
+      const nodes = createMockNodes(['user-query', 'rag', 'string-joiner', 'chat-message']);
+      nodes[1].data = { ...nodes[1].data, k: 3 };
+      nodes[2].data = { ...nodes[2].data, joinString: '\n' };
+      const edges = createEdges(nodes.map((n) => n.id));
+      const { result } = renderHook(() => useAgentGraphRunner());
+
+      mockGenerateEmbedding.mockResolvedValue([0.1, 0.2, 0.3]);
+      mockVectorSearch.mockReturnValue([
+        { document: { id: '1', filename: 'a.txt', content: 'chunk one', dateAdded: 0 }, score: 0.9 },
+        { document: { id: '2', filename: 'b.txt', content: 'chunk two', dateAdded: 0 }, score: 0.8 },
+        { document: { id: '3', filename: 'c.txt', content: 'chunk three', dateAdded: 0 }, score: 0.7 },
+      ]);
+
+      const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, onTrace);
+
+      expect(output).toBe('chunk one\nchunk two\nchunk three');
+    });
+
+    it('joins RAG chunks with custom separator', async () => {
+      const nodes = createMockNodes(['user-query', 'rag', 'string-joiner', 'chat-message']);
+      nodes[1].data = { ...nodes[1].data, k: 2 };
+      nodes[2].data = { ...nodes[2].data, joinString: ', ' };
+      const edges = createEdges(nodes.map((n) => n.id));
+      const { result } = renderHook(() => useAgentGraphRunner());
+
+      mockGenerateEmbedding.mockResolvedValue([0.1, 0.2, 0.3]);
+      mockVectorSearch.mockReturnValue([
+        { document: { id: '1', filename: 'a.txt', content: 'chunk one', dateAdded: 0 }, score: 0.9 },
+        { document: { id: '2', filename: 'b.txt', content: 'chunk two', dateAdded: 0 }, score: 0.8 },
+      ]);
+
+      const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, onTrace);
+
+      expect(output).toBe('chunk one, chunk two');
+    });
+
+    it('passes single chunk through unchanged', async () => {
+      const nodes = createMockNodes(['user-query', 'rag', 'string-joiner', 'chat-message']);
+      nodes[1].data = { ...nodes[1].data, k: 1 };
+      nodes[2].data = { ...nodes[2].data, joinString: ', ' };
+      const edges = createEdges(nodes.map((n) => n.id));
+      const { result } = renderHook(() => useAgentGraphRunner());
+
+      mockGenerateEmbedding.mockResolvedValue([0.1, 0.2, 0.3]);
+      mockVectorSearch.mockReturnValue([
+        { document: { id: '1', filename: 'a.txt', content: 'only chunk', dateAdded: 0 }, score: 0.9 },
+      ]);
+
+      const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, onTrace);
+
+      expect(output).toBe('only chunk');
+    });
+  });
+
   describe('if-string-contains node', () => {
     it('passes input through when substring is found (case sensitive)', async () => {
       const nodes = createMockNodes(['user-query', 'if-string-contains', 'chat-message']);

@@ -78,6 +78,11 @@ export function useAgentGraphRunner() {
           chunks = [];
         }
         currentOutput = chunks.join('\n\n---\n\n');
+      } else if (nodeType === 'string-joiner') {
+        const joinString = (nodeData.joinString as string) ?? '\n';
+        const parts = currentOutput.split('\n\n---\n\n');
+        currentOutput = parts.join(joinString);
+        console.log(`[AgentGraph] string-joiner "${nodeData.label}": joined ${parts.length} parts with separator "${joinString.replace('\n', '\\n')}"`);
       } else if (nodeType === 'if-string-contains') {
         const containsString = (nodeData.containsString as string) ?? '';
         const caseSensitive = (nodeData.caseSensitive as boolean) ?? true;
