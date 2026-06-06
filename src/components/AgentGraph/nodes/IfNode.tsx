@@ -1,5 +1,5 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import type { AgentNodeData } from '../../../types/agentGraph';
+import type { AgentNodeData, AgentNodeType } from '../../../types/agentGraph';
 import { AGENT_NODE_DEFINITIONS } from '../../../types/agentGraph';
 import './IfNode.css';
 
@@ -15,9 +15,12 @@ const handleClass: Record<string, string> = {
   'list<string>': 'handle--list-string',
 };
 
-const handleExtraClass = (handleId: string): string => {
+const handleExtraClass = (handleId: string, nodeType?: AgentNodeType): string => {
   if (handleId === 'true') return ' handle--if-true';
   if (handleId === 'false') return ' handle--if-false';
+  if ((nodeType === 'logic-and' || nodeType === 'logic-or') && handleId === 'conditions') {
+    return ' handle--conditions';
+  }
   return '';
 };
 
@@ -27,9 +30,19 @@ const handlePosition = (handleId: string): React.CSSProperties | undefined => {
   return undefined;
 };
 
-const handleTitle = (handleId: string): string | undefined => {
+const handleTitle = (handleId: string, nodeType?: AgentNodeType): string | undefined => {
   if (handleId === 'true') return 'Flows when true';
   if (handleId === 'false') return 'Flows when false';
+  if (nodeType === 'logic-and') {
+    if (handleId === 'conditions') return 'All conditions must be met';
+    if (handleId === 'value') return 'Value to pass through when all conditions are met';
+    if (handleId === 'output') return 'Output value';
+  }
+  if (nodeType === 'logic-or') {
+    if (handleId === 'conditions') return 'Any condition must be met';
+    if (handleId === 'value') return 'Value to pass through when any condition is met';
+    if (handleId === 'output') return 'Output value';
+  }
   return undefined;
 };
 
@@ -51,9 +64,9 @@ export default function IfNode({ data, selected }: NodeProps) {
           type={h.type}
           position={positionMap[h.position]}
           id={h.id}
-          className={`${handleClass[h.valueType]}${handleExtraClass(h.id)}`}
+          className={`${handleClass[h.valueType]}${handleExtraClass(h.id, nodeData.nodeType)}`}
           style={handlePosition(h.id)}
-          title={handleTitle(h.id)}
+          title={handleTitle(h.id, nodeData.nodeType)}
         />
       ))}
       <span className="if-node__label">{nodeData.label}</span>

@@ -19,6 +19,10 @@
   white-space: nowrap;
 }
 
+.if-node .handle--conditions {
+  background: #4caf50 !important;
+}
+
 .if-node .handle--if-true {
   background: #4caf50 !important;
 }
