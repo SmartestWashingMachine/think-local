@@ -11,6 +11,7 @@ interface ModelSelectorProps {
   loadedModel: ModelInfo | null;
   cachedModels: { url: string; size: number }[];
   onSelectModel: (model: ModelInfo) => void;
+  webGpuSupported: boolean | null;
 }
 
 function formatBytes(bytes: number): string {
@@ -27,6 +28,7 @@ export default function ModelSelector({
   loadedModel,
   cachedModels,
   onSelectModel,
+  webGpuSupported,
 }: ModelSelectorProps) {
   const [customInput, setCustomInput] = useState('');
 
@@ -87,6 +89,13 @@ export default function ModelSelector({
         </div>
 
         <div className="model-selector__body">
+          {webGpuSupported !== null && (
+            <div className={`model-selector__webgpu model-selector__webgpu--${webGpuSupported ? 'supported' : 'unsupported'}`}>
+              <span className="model-selector__webgpu-dot" />
+              {webGpuSupported ? 'WebGPU active' : 'WebGPU not available — falling back to CPU'}
+            </div>
+          )}
+
           {loadedModel && (
             <div className="model-selector__loaded">
               <span className="model-selector__loaded-label">Active model:</span>

@@ -6,6 +6,7 @@ import { generateEmbedding } from '../ai/embeddings';
 import { search as vectorSearch } from '../ai/vectorStore';
 import type { ChatCompletionTool } from '../types/mcp';
 import type { ChatCompletionMessage } from '@wllama/wllama/esm/types/oai-compat';
+import type { Message } from '../types/chat';
 
 type NodeOutputValue = string | string[] | null;
 
@@ -17,6 +18,7 @@ interface NodeHandlerContext {
   handleOutputs: Map<string, Map<string, NodeOutputValue>>;
   nodes: Node[];
   edges: Edge[];
+  messages: Message[];
   generateCompletionStream: (
     messages: { role: 'user' | 'assistant' | 'system'; content: string }[],
     onToken: (token: string) => void,
@@ -84,10 +86,14 @@ function preview(val: string, max = 200): string {
   return val.length > max ? val.slice(0, max) + '...' : val;
 }
 
-const llmHandler: NodeHandler = async ({ firstStr, nodeData, generateCompletionStream, onToken, setAssistantContent, mcpTools, mcpSystemMessage, executeTool, generateCompletionWithTools, onToolTrace }) => {
+const llmHandler: NodeHandler = async ({ firstStr, nodeData, messages: conversationHistory, generateCompletionStream, onToken, setAssistantContent, mcpTools, mcpSystemMessage, executeTool, generateCompletionWithTools, onToolTrace }) => {
   const messageTemplate = (nodeData.message as string) ?? '{text}';
   const prompt = messageTemplate.replace('{text}', firstStr);
   const streamOutput = (nodeData.streamOutput as boolean) ?? false;
+
+  const historyMessages = conversationHistory
+    .filter((m) => m.role === 'user' || m.role === 'assistant')
+    .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
   if (mcpTools && mcpTools.length > 0 && generateCompletionWithTools && executeTool) {
     setAssistantContent?.('');
@@ -95,6 +101,7 @@ const llmHandler: NodeHandler = async ({ firstStr, nodeData, generateCompletionS
     if (mcpSystemMessage) {
       messages.push({ role: 'system', content: mcpSystemMessage });
     }
+    messages.push(...historyMessages);
     messages.push({ role: 'user', content: prompt });
     return await generateCompletionWithTools(
       messages,
@@ -105,16 +112,23 @@ const llmHandler: NodeHandler = async ({ firstStr, nodeData, generateCompletionS
     );
   }
 
+  const llmMessages: { role: 'user' | 'assistant' | 'system'; content: string }[] = [];
+  if (mcpSystemMessage) {
+    llmMessages.push({ role: 'system', content: mcpSystemMessage });
+  }
+  llmMessages.push(...historyMessages);
+  llmMessages.push({ role: 'user', content: prompt });
+
   if (streamOutput) {
     setAssistantContent?.('');
     return await generateCompletionStream(
-      [{ role: 'user', content: prompt }],
+      llmMessages,
       onToken,
     );
   }
 
   return await generateCompletionStream(
-    [{ role: 'user', content: prompt }],
+    llmMessages,
     () => {},
   );
 };
@@ -250,6 +264,7 @@ export function useAgentGraphRunner() {
     nodes: Node[],
     edges: Edge[],
     userInput: string,
+    messages: Message[],
     generateCompletionStream: (
       messages: { role: 'user' | 'assistant' | 'system'; content: string }[],
       onToken: (token: string) => void,
@@ -352,6 +367,7 @@ export function useAgentGraphRunner() {
           handleOutputs,
           nodes,
           edges,
+          messages,
           generateCompletionStream,
           onToken,
           setAssistantContent,

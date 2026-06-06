@@ -124,6 +124,7 @@ export default function Chat({
             messages={activeConversation?.messages ?? []}
             sendMessage={sendMessage}
             modelStatus={modelStatus}
+            onOpenModelSelector={onOpenModelSelector}
           />
         ) : view === 'rag' ? (
           <RagView

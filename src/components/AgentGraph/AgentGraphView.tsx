@@ -80,6 +80,7 @@ interface AgentGraphViewProps {
     onStream?: (messages: Message[], onToken: (token: string) => void, setAssistantContent: (content: string) => void) => Promise<string>,
   ) => Promise<void>;
   modelStatus: string;
+  onOpenModelSelector: () => void;
 }
 
 function loadGraphNodes(): Node[] | null {
@@ -108,7 +109,7 @@ function saveGraphEdges(edges: Edge[]) {
   localStorage.setItem(STORAGE_KEYS.agentGraphEdges, JSON.stringify(edges));
 }
 
-export default function AgentGraphView({ onClearChat, generateCompletionStream, generateCompletionWithTools, messages, sendMessage, modelStatus }: AgentGraphViewProps) {
+export default function AgentGraphView({ onClearChat, generateCompletionStream, generateCompletionWithTools, messages, sendMessage, modelStatus, onOpenModelSelector }: AgentGraphViewProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState(loadGraphNodes() ?? INITIAL_NODES);
   const [edges, setEdges, onEdgesChange] = useEdgesState(loadGraphEdges() ?? INITIAL_EDGES);
 
@@ -288,7 +289,7 @@ export default function AgentGraphView({ onClearChat, generateCompletionStream, 
     try {
       await sendMessage(content, async (_history, onToken, setAssistantContent) => {
         const result = await executeGraph(
-          nodes, edges, content, generateCompletionStream, onToken, setAssistantContent,
+          nodes, edges, content, messages, generateCompletionStream, onToken, setAssistantContent,
           (entry) => {
             collected.push(entry);
             setTraceEntries([...collected]);
@@ -348,7 +349,9 @@ export default function AgentGraphView({ onClearChat, generateCompletionStream, 
           </div>
           <div className="agent-graph-view__input-area">
             {modelStatus !== 'loaded' && (
-              <p className="agent-graph-view__model-warning">No model loaded. Select a model first.</p>
+              <button className="agent-graph-view__model-warning" onClick={onOpenModelSelector} type="button">
+                No model loaded. Select a model first.
+              </button>
             )}
             <div className="agent-graph-view__input-row">
               <textarea

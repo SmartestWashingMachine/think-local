@@ -28,6 +28,7 @@ export default function App() {
     loadModel,
     generateCompletionStream,
     generateCompletionWithTools,
+    webGpuSupported,
   } = useAI();
 
   const {
@@ -140,6 +141,7 @@ export default function App() {
           loadModel(info);
           setModelSelectorOpen(false);
         }}
+        webGpuSupported={webGpuSupported}
       />
       <EmbeddingModelSelector
         open={embeddingModelSelectorOpen}

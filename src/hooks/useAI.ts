@@ -23,6 +23,22 @@ export function useAI() {
   const [cachedList, setCachedList] = useState<{ url: string; size: number }[]>(
     []
   );
+  const [webGpuSupported, setWebGpuSupported] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        if (typeof navigator !== 'undefined' && 'gpu' in navigator) {
+          const adapter = await (navigator.gpu as GPU).requestAdapter();
+          setWebGpuSupported(!!adapter);
+        } else {
+          setWebGpuSupported(false);
+        }
+      } catch {
+        setWebGpuSupported(false);
+      }
+    })();
+  }, []);
 
   const refreshCachedList = useCallback(async () => {
     const wllama = wllamaRef.current;
@@ -288,6 +304,7 @@ export function useAI() {
     loadedModel: loadedModelInfo,
     error,
     cachedModels: cachedList,
+    webGpuSupported,
     loadModel,
     unloadModel,
     generateCompletionStream,
