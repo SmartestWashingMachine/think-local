@@ -18,3 +18,11 @@
 .if-node__label {
   white-space: nowrap;
 }
+
+.if-node .handle--if-true {
+  background: #4caf50 !important;
+}
+
+.if-node .handle--if-false {
+  background: #f44336 !important;
+}
