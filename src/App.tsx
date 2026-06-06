@@ -51,6 +51,7 @@ export default function App() {
     switchConversation,
     deleteConversation,
     sendMessage,
+    clearMessages,
     importConversations,
     exportConversations,
   } = useConversations();
@@ -115,6 +116,7 @@ export default function App() {
           onAugmentWithRag={handleAugmentWithRag}
           onImportConversations={importConversations}
           onExportConversations={exportConversations}
+          clearMessages={clearMessages}
           onOpenModelSelector={() => setModelSelectorOpen(true)}
           onOpenEmbeddingModelSelector={() => setEmbeddingModelSelectorOpen(true)}
           onOpenAddDocuments={() => setDocumentUploadOpen(true)}
