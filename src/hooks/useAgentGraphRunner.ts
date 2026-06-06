@@ -4,6 +4,8 @@ import type { AgentNodeData, AgentNodeType, TraceEntry } from '../types/agentGra
 import { AGENT_NODE_DEFINITIONS } from '../types/agentGraph';
 import { generateEmbedding } from '../ai/embeddings';
 import { search as vectorSearch } from '../ai/vectorStore';
+import type { ChatCompletionTool } from '../types/mcp';
+import type { ChatCompletionMessage } from '@wllama/wllama/esm/types/oai-compat';
 
 type NodeOutputValue = string | string[] | null;
 
@@ -21,6 +23,17 @@ interface NodeHandlerContext {
   ) => Promise<string>;
   onToken: (token: string) => void;
   setAssistantContent?: (content: string) => void;
+  mcpTools?: ChatCompletionTool[];
+  mcpSystemMessage?: string;
+  executeTool?: (name: string, args: Record<string, unknown>) => Promise<string>;
+  generateCompletionWithTools?: (
+    messages: ChatCompletionMessage[],
+    onToken: (token: string) => void,
+    tools: ChatCompletionTool[],
+    executeTool: (name: string, args: Record<string, unknown>) => Promise<string>,
+    onToolTrace?: (name: string, args: string, result: string) => void,
+  ) => Promise<string>;
+  onToolTrace?: (name: string, args: string, result: string) => void;
 }
 
 type NodeHandler = (ctx: NodeHandlerContext) => Promise<NodeOutputValue>;
@@ -71,10 +84,26 @@ function preview(val: string, max = 200): string {
   return val.length > max ? val.slice(0, max) + '...' : val;
 }
 
-const llmHandler: NodeHandler = async ({ firstStr, nodeData, generateCompletionStream, onToken, setAssistantContent }) => {
+const llmHandler: NodeHandler = async ({ firstStr, nodeData, generateCompletionStream, onToken, setAssistantContent, mcpTools, mcpSystemMessage, executeTool, generateCompletionWithTools, onToolTrace }) => {
   const messageTemplate = (nodeData.message as string) ?? '{text}';
   const prompt = messageTemplate.replace('{text}', firstStr);
   const streamOutput = (nodeData.streamOutput as boolean) ?? false;
+
+  if (mcpTools && mcpTools.length > 0 && generateCompletionWithTools && executeTool) {
+    setAssistantContent?.('');
+    const messages: ChatCompletionMessage[] = [];
+    if (mcpSystemMessage) {
+      messages.push({ role: 'system', content: mcpSystemMessage });
+    }
+    messages.push({ role: 'user', content: prompt });
+    return await generateCompletionWithTools(
+      messages,
+      onToken,
+      mcpTools,
+      executeTool,
+      onToolTrace,
+    );
+  }
 
   if (streamOutput) {
     setAssistantContent?.('');
@@ -228,11 +257,27 @@ export function useAgentGraphRunner() {
     onToken: (token: string) => void,
     setAssistantContent?: (content: string) => void,
     onTrace?: (entry: TraceEntry) => void,
+    mcpConfig?: {
+      systemMessage: string;
+      tools: ChatCompletionTool[];
+      executeTool: (name: string, args: Record<string, unknown>) => Promise<string>;
+    } | null,
+    generateCompletionWithToolsFn?: (
+      messages: ChatCompletionMessage[],
+      onToken: (token: string) => void,
+      tools: ChatCompletionTool[],
+      executeTool: (name: string, args: Record<string, unknown>) => Promise<string>,
+      onToolTrace?: (name: string, args: string, result: string) => void,
+    ) => Promise<string>,
   ): Promise<string> => {
     const userQueryNode = nodes.find(
       (n) => (n.data as unknown as AgentNodeData).nodeType === 'user-query',
     );
     if (!userQueryNode) return userInput;
+
+    const mcpNode = nodes.find(
+      (n) => (n.data as unknown as AgentNodeData).nodeType === 'mcp',
+    );
 
     const addTrace = (node: Node, type: 'input' | 'output', description: string) => {
       const nodeData = node.data as unknown as AgentNodeData;
@@ -246,6 +291,18 @@ export function useAgentGraphRunner() {
         description,
       });
     };
+
+    if (mcpNode && mcpConfig) {
+      onTrace?.({
+        id: crypto.randomUUID(),
+        timestamp: Date.now(),
+        nodeId: mcpNode.id,
+        nodeLabel: 'System Message',
+        nodeType: 'system-message',
+        type: 'input',
+        description: mcpConfig.systemMessage,
+      });
+    }
 
     addTrace(userQueryNode, 'output', userInput);
 
@@ -312,6 +369,31 @@ export function useAgentGraphRunner() {
           generateCompletionStream,
           onToken,
           setAssistantContent,
+          mcpTools: mcpConfig?.tools,
+          mcpSystemMessage: mcpConfig?.systemMessage,
+          executeTool: mcpConfig?.executeTool,
+          generateCompletionWithTools: generateCompletionWithToolsFn,
+          onToolTrace: (name, args, toolResult) => {
+            const nodeLabel = `Tool: ${name}`;
+            onTrace?.({
+              id: crypto.randomUUID(),
+              timestamp: Date.now(),
+              nodeId: mcpNode?.id ?? 'mcp',
+              nodeLabel,
+              nodeType: 'tool-call',
+              type: 'input',
+              description: args,
+            });
+            onTrace?.({
+              id: crypto.randomUUID(),
+              timestamp: Date.now(),
+              nodeId: mcpNode?.id ?? 'mcp',
+              nodeLabel,
+              nodeType: 'tool-call',
+              type: 'output',
+              description: toolResult,
+            });
+          },
         });
       } catch (err) {
         console.warn(`[AgentGraph] Handler for "${nodeType}" failed:`, err);
@@ -327,8 +409,6 @@ export function useAgentGraphRunner() {
           ['false', conditionMet ? null : result],
         ]));
       } else {
-        // For single-output nodes, store primary result (for backward compat)
-        // and also under the 'output' handle key for handle-aware readers
         outputs.set(nodeId, result);
       }
 

@@ -8,9 +8,10 @@ export type AgentNodeType =
   | 'if-closest-document'
   | 'logic-and'
   | 'logic-or'
-  | 'chat-message';
+  | 'chat-message'
+  | 'mcp';
 
-export type AgentNodeCategory = 'input' | 'process' | 'if' | 'output';
+export type AgentNodeCategory = 'input' | 'process' | 'if' | 'output' | 'mcp';
 
 export type ValueType = 'string' | 'list<string>';
 
@@ -72,6 +73,8 @@ export interface AgentNodeDefinition {
   properties: PropertyDefinition[];
   defaults: Record<string, unknown>;
 }
+
+export type TraceNodeType = AgentNodeType | 'system-message' | 'tool-call';
 
 export const AGENT_NODE_DEFINITIONS: Record<AgentNodeType, AgentNodeDefinition> = {
   'user-query': {
@@ -221,6 +224,28 @@ export const AGENT_NODE_DEFINITIONS: Record<AgentNodeType, AgentNodeDefinition> 
     properties: [],
     defaults: {},
   },
+  mcp: {
+    type: 'mcp',
+    category: 'mcp',
+    label: 'MCP',
+    color: '#ff9800',
+    description: 'Enables MCP tool calling. Add this node to give the LLM access to built-in tools.',
+    handles: [],
+    properties: [
+      { key: 'systemMessage', label: 'System Message', type: 'text', placeholder: 'Auto-generated from enabled tools', description: 'Template for the system prompt injected before each LLM call. Leave empty to auto-generate.' },
+      { key: 'currentDateEnabled', label: 'Current Date', type: 'boolean', description: 'Get current date as a string' },
+      { key: 'calculatorEnabled', label: 'Calculator', type: 'boolean', description: 'Parse math operation and calculate result' },
+      { key: 'sayOutLoudEnabled', label: 'Say Out Loud', type: 'boolean', description: 'Use speech API for text to speech' },
+      { key: 'regexFilterEnabled', label: 'Regex Filter', type: 'boolean', description: 'Apply a regex filter to a string and return matches' },
+    ],
+    defaults: {
+      systemMessage: '',
+      currentDateEnabled: true,
+      calculatorEnabled: true,
+      sayOutLoudEnabled: false,
+      regexFilterEnabled: false,
+    },
+  },
 };
 
 export interface TraceEntry {
@@ -228,7 +253,7 @@ export interface TraceEntry {
   timestamp: number;
   nodeId: string;
   nodeLabel: string;
-  nodeType: AgentNodeType;
+  nodeType: TraceNodeType;
   type: 'input' | 'output';
   description: string;
 }
@@ -238,4 +263,5 @@ export const AGENT_NODE_CATEGORIES: { key: AgentNodeCategory; label: string }[] 
   { key: 'process', label: 'Process' },
   { key: 'if', label: 'IF / Logic' },
   { key: 'output', label: 'Output' },
+  { key: 'mcp', label: 'MCP' },
 ];

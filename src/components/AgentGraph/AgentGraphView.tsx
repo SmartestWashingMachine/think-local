@@ -13,6 +13,10 @@ import { AGENT_NODE_DEFINITIONS } from '../../types/agentGraph';
 import type { Message } from '../../types/chat';
 import { STORAGE_KEYS } from '../../constants/chat';
 import { useAgentGraphRunner } from '../../hooks/useAgentGraphRunner';
+import { useMCP } from '../../hooks/useMCP';
+import { generateSystemMessage } from '../../types/mcp';
+import type { MCPToolType } from '../../types/mcp';
+import type { ChatCompletionTool, ChatCompletionMessage } from '@wllama/wllama/esm/types/oai-compat';
 import GraphCanvas from './GraphCanvas';
 import RightPane from './RightPane';
 import './AgentGraphView.css';
@@ -63,6 +67,13 @@ interface AgentGraphViewProps {
     messages: { role: 'user' | 'assistant' | 'system'; content: string }[],
     onToken: (token: string) => void,
   ) => Promise<string>;
+  generateCompletionWithTools?: (
+    messages: ChatCompletionMessage[],
+    onToken: (token: string) => void,
+    tools: ChatCompletionTool[],
+    executeTool: (name: string, args: Record<string, unknown>) => Promise<string>,
+    onToolTrace?: (name: string, args: string, result: string) => void,
+  ) => Promise<string>;
   messages: Message[];
   sendMessage: (
     content: string,
@@ -97,7 +108,7 @@ function saveGraphEdges(edges: Edge[]) {
   localStorage.setItem(STORAGE_KEYS.agentGraphEdges, JSON.stringify(edges));
 }
 
-export default function AgentGraphView({ onClearChat, generateCompletionStream, messages, sendMessage, modelStatus }: AgentGraphViewProps) {
+export default function AgentGraphView({ onClearChat, generateCompletionStream, generateCompletionWithTools, messages, sendMessage, modelStatus }: AgentGraphViewProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState(loadGraphNodes() ?? INITIAL_NODES);
   const [edges, setEdges, onEdgesChange] = useEdgesState(loadGraphEdges() ?? INITIAL_EDGES);
 
@@ -113,6 +124,7 @@ export default function AgentGraphView({ onClearChat, generateCompletionStream, 
   const [inputValue, setInputValue] = useState('');
   const [traceEntries, setTraceEntries] = useState<TraceEntry[]>([]);
   const { executeGraph } = useAgentGraphRunner();
+  const { executeTool, getToolDefinitions } = useMCP();
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
 
@@ -211,20 +223,45 @@ export default function AgentGraphView({ onClearChat, generateCompletionStream, 
     setSending(true);
     setTraceEntries([]);
     setRightPaneTab('trace');
+
+    const mcpNode = nodes.find((n) => (n.data as unknown as AgentNodeData).nodeType === 'mcp');
+    let mcpConfig: { systemMessage: string; tools: ChatCompletionTool[]; executeTool: (name: string, args: Record<string, unknown>) => Promise<string> } | null = null;
+    if (mcpNode) {
+      const mcpData = mcpNode.data as unknown as AgentNodeData;
+      const enabledToolTypes: MCPToolType[] = [];
+      if (mcpData.currentDateEnabled) enabledToolTypes.push('current-date');
+      if (mcpData.calculatorEnabled) enabledToolTypes.push('calculator');
+      if (mcpData.sayOutLoudEnabled) enabledToolTypes.push('say-out-loud');
+      if (mcpData.regexFilterEnabled) enabledToolTypes.push('regex-filter');
+      const systemMessage = (mcpData.systemMessage as string) || (enabledToolTypes.length > 0 ? generateSystemMessage(enabledToolTypes) : '');
+      if (enabledToolTypes.length > 0) {
+        mcpConfig = {
+          systemMessage,
+          tools: getToolDefinitions(enabledToolTypes),
+          executeTool,
+        };
+      }
+    }
+
     const collected: TraceEntry[] = [];
     try {
       await sendMessage(content, async (_history, onToken, setAssistantContent) => {
-        const result = await executeGraph(nodes, edges, content, generateCompletionStream, onToken, setAssistantContent, (entry) => {
-          collected.push(entry);
-          setTraceEntries([...collected]);
-        });
+        const result = await executeGraph(
+          nodes, edges, content, generateCompletionStream, onToken, setAssistantContent,
+          (entry) => {
+            collected.push(entry);
+            setTraceEntries([...collected]);
+          },
+          mcpConfig,
+          generateCompletionWithTools,
+        );
         return result;
       });
     } finally {
       setSending(false);
       inputRef.current?.focus();
     }
-  }, [inputValue, sending, sendMessage, nodes, edges, generateCompletionStream, executeGraph]);
+  }, [inputValue, sending, sendMessage, nodes, edges, generateCompletionStream, generateCompletionWithTools, executeGraph, executeTool, getToolDefinitions]);
 
   function formatTime(ts: number): string {
     return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });

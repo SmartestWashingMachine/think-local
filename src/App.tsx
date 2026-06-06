@@ -27,6 +27,7 @@ export default function App() {
     cachedModels,
     loadModel,
     generateCompletionStream,
+    generateCompletionWithTools,
   } = useAI();
 
   const {
@@ -114,6 +115,7 @@ export default function App() {
           onSendMessage={handleSendMessage}
           sendMessage={sendMessage}
           generateCompletionStream={generateCompletionStream}
+          generateCompletionWithTools={generateCompletionWithTools}
           onAugmentWithRag={handleAugmentWithRag}
           onImportConversations={importConversations}
           onExportConversations={exportConversations}

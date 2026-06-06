@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Conversation, ViewState, Message } from '../types/chat';
+import type { ChatCompletionTool, ChatCompletionMessage } from '@wllama/wllama/esm/types/oai-compat';
 import type { StoredDocument } from '../types/rag';
 import { RAG_FIRST_MESSAGE_TEMPLATE, RAG_DEFAULT_TEMPLATE } from '../constants/rag';
 import Sidebar from './Sidebar';
@@ -29,6 +30,13 @@ interface ChatProps {
     messages: { role: 'user' | 'assistant' | 'system'; content: string }[],
     onToken: (token: string) => void,
   ) => Promise<string>;
+  generateCompletionWithTools?: (
+    messages: ChatCompletionMessage[],
+    onToken: (token: string) => void,
+    tools: ChatCompletionTool[],
+    executeTool: (name: string, args: Record<string, unknown>) => Promise<string>,
+    onToolTrace?: (name: string, args: string, result: string) => void,
+  ) => Promise<string>;
   onAugmentWithRag?: (query: string) => Promise<string>;
   onImportConversations: (conversations: Conversation[]) => void;
   onExportConversations: () => Conversation[];
@@ -55,6 +63,7 @@ export default function Chat({
   sendMessage,
   clearMessages,
   generateCompletionStream,
+  generateCompletionWithTools,
   onAugmentWithRag,
   onImportConversations,
   onExportConversations,
@@ -111,6 +120,7 @@ export default function Chat({
             onBack={() => onNavigate('chat')}
             onClearChat={clearMessages}
             generateCompletionStream={generateCompletionStream}
+            generateCompletionWithTools={generateCompletionWithTools}
             messages={activeConversation?.messages ?? []}
             sendMessage={sendMessage}
             modelStatus={modelStatus}

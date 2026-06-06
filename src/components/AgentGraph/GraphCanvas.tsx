@@ -22,6 +22,7 @@ import InputNode from './nodes/InputNode';
 import ProcessNode from './nodes/ProcessNode';
 import IfNode from './nodes/IfNode';
 import OutputNode from './nodes/OutputNode';
+import MCPNode from './nodes/MCPNode';
 import './GraphCanvas.css';
 
 const nodeTypes: NodeTypes = {
@@ -29,6 +30,7 @@ const nodeTypes: NodeTypes = {
   process: ProcessNode,
   if: IfNode,
   output: OutputNode,
+  mcp: MCPNode,
 };
 
 interface GraphCanvasInnerProps {
