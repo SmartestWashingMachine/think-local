@@ -20,7 +20,7 @@ function createMockNodes(types: string[]): Node[] {
   return types.map((type, i) => ({
     id: `node-${i}`,
     type: type === 'user-query' ? 'input' :
-      type === 'if-string-contains' || type === 'if-closest-document' ? 'if' :
+      type === 'if-string-contains' || type === 'if-closest-document' || type === 'logic-and' || type === 'logic-or' ? 'if' :
       type === 'chat-message' ? 'output' : 'process',
     position: { x: i * 250, y: 200 },
     data: {
@@ -38,14 +38,14 @@ function createMockNodes(types: string[]): Node[] {
   })) as unknown as Node[];
 }
 
-function createEdges(nodeIds: string[]): Edge[] {
+function createEdges(nodeIds: string[], sourceHandle = 'output'): Edge[] {
   const edges: Edge[] = [];
   for (let i = 0; i < nodeIds.length - 1; i++) {
     edges.push({
       id: `edge-${i}`,
       source: nodeIds[i],
       target: nodeIds[i + 1],
-      sourceHandle: 'output',
+      sourceHandle,
       targetHandle: 'input',
     } as Edge);
   }
@@ -248,7 +248,7 @@ describe('useAgentGraphRunner', () => {
     it('passes input through when substring is found (case sensitive)', async () => {
       const nodes = createMockNodes(['user-query', 'if-string-contains', 'chat-message']);
       nodes[1].data = { ...nodes[1].data, containsString: 'world', caseSensitive: true };
-      const edges = createEdges(nodes.map((n) => n.id));
+      const edges = createEdges(nodes.map((n) => n.id), 'true');
       const { result } = renderHook(() => useAgentGraphRunner());
 
       const output = await result.current.executeGraph(nodes, edges, 'hello world', generateCompletionStream, onToken, onTrace);
@@ -259,7 +259,7 @@ describe('useAgentGraphRunner', () => {
     it('returns empty string when substring is not found', async () => {
       const nodes = createMockNodes(['user-query', 'if-string-contains', 'chat-message']);
       nodes[1].data = { ...nodes[1].data, containsString: 'foo', caseSensitive: true };
-      const edges = createEdges(nodes.map((n) => n.id));
+      const edges = createEdges(nodes.map((n) => n.id), 'true');
       const { result } = renderHook(() => useAgentGraphRunner());
 
       const output = await result.current.executeGraph(nodes, edges, 'hello world', generateCompletionStream, onToken, onTrace);
@@ -270,7 +270,7 @@ describe('useAgentGraphRunner', () => {
     it('passes input through when substring matches case-insensitively', async () => {
       const nodes = createMockNodes(['user-query', 'if-string-contains', 'chat-message']);
       nodes[1].data = { ...nodes[1].data, containsString: 'WORLD', caseSensitive: false };
-      const edges = createEdges(nodes.map((n) => n.id));
+      const edges = createEdges(nodes.map((n) => n.id), 'true');
       const { result } = renderHook(() => useAgentGraphRunner());
 
       const output = await result.current.executeGraph(nodes, edges, 'hello World', generateCompletionStream, onToken, onTrace);
@@ -281,7 +281,7 @@ describe('useAgentGraphRunner', () => {
     it('returns empty string when substring does not match case-insensitively', async () => {
       const nodes = createMockNodes(['user-query', 'if-string-contains', 'chat-message']);
       nodes[1].data = { ...nodes[1].data, containsString: 'foo', caseSensitive: false };
-      const edges = createEdges(nodes.map((n) => n.id));
+      const edges = createEdges(nodes.map((n) => n.id), 'true');
       const { result } = renderHook(() => useAgentGraphRunner());
 
       const output = await result.current.executeGraph(nodes, edges, 'hello world', generateCompletionStream, onToken, onTrace);
@@ -299,7 +299,7 @@ describe('useAgentGraphRunner', () => {
 
       const nodes = createMockNodes(['user-query', 'if-closest-document', 'chat-message']);
       nodes[1].data = { ...nodes[1].data, threshold: 0.7 };
-      const edges = createEdges(nodes.map((n) => n.id));
+      const edges = createEdges(nodes.map((n) => n.id), 'true');
       const { result } = renderHook(() => useAgentGraphRunner());
 
       const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, onTrace);
@@ -315,7 +315,7 @@ describe('useAgentGraphRunner', () => {
 
       const nodes = createMockNodes(['user-query', 'if-closest-document', 'chat-message']);
       nodes[1].data = { ...nodes[1].data, threshold: 0.7 };
-      const edges = createEdges(nodes.map((n) => n.id));
+      const edges = createEdges(nodes.map((n) => n.id), 'true');
       const { result } = renderHook(() => useAgentGraphRunner());
 
       const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, onTrace);
@@ -328,7 +328,7 @@ describe('useAgentGraphRunner', () => {
 
       const nodes = createMockNodes(['user-query', 'if-closest-document', 'chat-message']);
       nodes[1].data = { ...nodes[1].data, threshold: 0.7 };
-      const edges = createEdges(nodes.map((n) => n.id));
+      const edges = createEdges(nodes.map((n) => n.id), 'true');
       const { result } = renderHook(() => useAgentGraphRunner());
 
       const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, onTrace);
@@ -342,7 +342,7 @@ describe('useAgentGraphRunner', () => {
 
       const nodes = createMockNodes(['user-query', 'if-closest-document', 'chat-message']);
       nodes[1].data = { ...nodes[1].data, threshold: 0.7 };
-      const edges = createEdges(nodes.map((n) => n.id));
+      const edges = createEdges(nodes.map((n) => n.id), 'true');
       const { result } = renderHook(() => useAgentGraphRunner());
 
       const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, onTrace);
@@ -357,7 +357,7 @@ describe('useAgentGraphRunner', () => {
 
     const nodes = createMockNodes(['user-query', 'llm', 'if-closest-document', 'llm', 'chat-message']);
     nodes[2].data = { ...nodes[2].data, threshold: 0.7 };
-    const edges = createEdges(nodes.map((n) => n.id));
+    const edges = createEdges(nodes.map((n) => n.id), 'true');
     const { result } = renderHook(() => useAgentGraphRunner());
 
     const output = await result.current.executeGraph(nodes, edges, 'test query', generateCompletionStream, onToken, onTrace);
@@ -375,7 +375,7 @@ describe('useAgentGraphRunner', () => {
       { id: 'e1', source: 'node-0', target: 'node-1', sourceHandle: 'output', targetHandle: 'input' },
       { id: 'e2', source: 'node-0', target: 'node-2', sourceHandle: 'output', targetHandle: 'input' },
       { id: 'e3', source: 'node-1', target: 'node-3', sourceHandle: 'output', targetHandle: 'input' },
-      { id: 'e4', source: 'node-2', target: 'node-3', sourceHandle: 'output', targetHandle: 'input' },
+      { id: 'e4', source: 'node-2', target: 'node-3', sourceHandle: 'true', targetHandle: 'input' },
       { id: 'e5', source: 'node-3', target: 'node-4', sourceHandle: 'output', targetHandle: 'input' },
     ] as Edge[];
     nodes[1].data = { ...nodes[1].data, k: 2 };
@@ -387,5 +387,95 @@ describe('useAgentGraphRunner', () => {
     const output = await result.current.executeGraph(nodes, edges, 'test', generateCompletionStream, onToken, onTrace);
 
     expect(output).toBe('surviving chunk');
+  });
+
+  describe('AND gate', () => {
+    it('passes value through when all conditions flow', async () => {
+      const nodes = createMockNodes(['user-query', 'llm', 'llm', 'llm', 'logic-and', 'chat-message']);
+      const edges: Edge[] = [
+        { id: 'e1', source: 'node-0', target: 'node-1', sourceHandle: 'output', targetHandle: 'input' },
+        { id: 'e2', source: 'node-0', target: 'node-2', sourceHandle: 'output', targetHandle: 'input' },
+        { id: 'e3', source: 'node-0', target: 'node-3', sourceHandle: 'output', targetHandle: 'input' },
+        { id: 'e4', source: 'node-1', target: 'node-4', sourceHandle: 'output', targetHandle: 'conditions' },
+        { id: 'e5', source: 'node-2', target: 'node-4', sourceHandle: 'output', targetHandle: 'conditions' },
+        { id: 'e6', source: 'node-3', target: 'node-4', sourceHandle: 'output', targetHandle: 'value' },
+        { id: 'e7', source: 'node-4', target: 'node-5', sourceHandle: 'output', targetHandle: 'input' },
+      ] as Edge[];
+      const { result } = renderHook(() => useAgentGraphRunner());
+
+      const output = await result.current.executeGraph(nodes, edges, 'test', generateCompletionStream, onToken, onTrace);
+
+      expect(generateCompletionStream).toHaveBeenCalledTimes(3);
+      expect(output).toBe('LLM response');
+    });
+
+    it('returns null when a condition fails', async () => {
+      const nodes = createMockNodes(['user-query', 'if-string-contains', 'llm', 'logic-and', 'chat-message']);
+      nodes[1].data = { ...nodes[1].data, containsString: 'xyz', caseSensitive: true };
+      const edges: Edge[] = [
+        { id: 'e1', source: 'node-0', target: 'node-1', sourceHandle: 'output', targetHandle: 'input' },
+        { id: 'e2', source: 'node-0', target: 'node-2', sourceHandle: 'output', targetHandle: 'input' },
+        { id: 'e3', source: 'node-1', target: 'node-3', sourceHandle: 'true', targetHandle: 'conditions' },
+        { id: 'e4', source: 'node-2', target: 'node-3', sourceHandle: 'output', targetHandle: 'value' },
+        { id: 'e5', source: 'node-3', target: 'node-4', sourceHandle: 'output', targetHandle: 'input' },
+      ] as Edge[];
+      const { result } = renderHook(() => useAgentGraphRunner());
+
+      const output = await result.current.executeGraph(nodes, edges, 'hello', generateCompletionStream, onToken, onTrace);
+
+      expect(generateCompletionStream).toHaveBeenCalledTimes(1);
+      expect(output).toBe('');
+    });
+
+    it('returns null when no value edge', async () => {
+      const nodes = createMockNodes(['user-query', 'llm', 'logic-and', 'chat-message']);
+      const edges: Edge[] = [
+        { id: 'e1', source: 'node-0', target: 'node-1', sourceHandle: 'output', targetHandle: 'input' },
+        { id: 'e2', source: 'node-1', target: 'node-2', sourceHandle: 'output', targetHandle: 'conditions' },
+        { id: 'e3', source: 'node-2', target: 'node-3', sourceHandle: 'output', targetHandle: 'input' },
+      ] as Edge[];
+      const { result } = renderHook(() => useAgentGraphRunner());
+
+      const output = await result.current.executeGraph(nodes, edges, 'test', generateCompletionStream, onToken, onTrace);
+
+      expect(output).toBe('');
+    });
+  });
+
+  describe('OR gate', () => {
+    it('passes value through when any condition flows', async () => {
+      const nodes = createMockNodes(['user-query', 'llm', 'llm', 'logic-or', 'chat-message']);
+      const edges: Edge[] = [
+        { id: 'e1', source: 'node-0', target: 'node-1', sourceHandle: 'output', targetHandle: 'input' },
+        { id: 'e2', source: 'node-0', target: 'node-2', sourceHandle: 'output', targetHandle: 'input' },
+        { id: 'e3', source: 'node-1', target: 'node-3', sourceHandle: 'output', targetHandle: 'conditions' },
+        { id: 'e4', source: 'node-2', target: 'node-3', sourceHandle: 'output', targetHandle: 'value' },
+        { id: 'e5', source: 'node-3', target: 'node-4', sourceHandle: 'output', targetHandle: 'input' },
+      ] as Edge[];
+      const { result } = renderHook(() => useAgentGraphRunner());
+
+      const output = await result.current.executeGraph(nodes, edges, 'test', generateCompletionStream, onToken, onTrace);
+
+      expect(generateCompletionStream).toHaveBeenCalledTimes(2);
+      expect(output).toBe('LLM response');
+    });
+
+    it('returns null when no conditions flow', async () => {
+      const nodes = createMockNodes(['user-query', 'if-string-contains', 'llm', 'logic-or', 'chat-message']);
+      nodes[1].data = { ...nodes[1].data, containsString: 'xyz', caseSensitive: true };
+      const edges: Edge[] = [
+        { id: 'e1', source: 'node-0', target: 'node-1', sourceHandle: 'output', targetHandle: 'input' },
+        { id: 'e2', source: 'node-0', target: 'node-2', sourceHandle: 'output', targetHandle: 'input' },
+        { id: 'e3', source: 'node-1', target: 'node-3', sourceHandle: 'true', targetHandle: 'conditions' },
+        { id: 'e4', source: 'node-2', target: 'node-3', sourceHandle: 'output', targetHandle: 'value' },
+        { id: 'e5', source: 'node-3', target: 'node-4', sourceHandle: 'output', targetHandle: 'input' },
+      ] as Edge[];
+      const { result } = renderHook(() => useAgentGraphRunner());
+
+      const output = await result.current.executeGraph(nodes, edges, 'hello', generateCompletionStream, onToken, onTrace);
+
+      expect(generateCompletionStream).toHaveBeenCalledTimes(1);
+      expect(output).toBe('');
+    });
   });
 });

@@ -6,6 +6,8 @@ export type AgentNodeType =
   | 'format-string'
   | 'if-string-contains'
   | 'if-closest-document'
+  | 'logic-and'
+  | 'logic-or'
   | 'chat-message';
 
 export type AgentNodeCategory = 'input' | 'process' | 'if' | 'output';
@@ -153,7 +155,8 @@ export const AGENT_NODE_DEFINITIONS: Record<AgentNodeType, AgentNodeDefinition> 
     description: 'Branches based on whether a substring is found',
     handles: [
       { id: 'input', label: 'Input', type: 'target', position: 'top', valueType: 'string' },
-      { id: 'output', label: 'Output', type: 'source', position: 'bottom', valueType: 'string' },
+      { id: 'true', label: 'True', type: 'source', position: 'bottom', valueType: 'string' },
+      { id: 'false', label: 'False', type: 'source', position: 'bottom', valueType: 'string' },
     ],
     properties: [
       { key: 'containsString', label: 'Contains String', type: 'text', placeholder: 'substring', description: 'Does input contain this string?' },
@@ -169,12 +172,41 @@ export const AGENT_NODE_DEFINITIONS: Record<AgentNodeType, AgentNodeDefinition> 
     description: 'Branches based on the closest matching document',
     handles: [
       { id: 'input', label: 'Query', type: 'target', position: 'top', valueType: 'string' },
-      { id: 'output', label: 'Output', type: 'source', position: 'bottom', valueType: 'string' },
+      { id: 'true', label: 'True', type: 'source', position: 'bottom', valueType: 'string' },
+      { id: 'false', label: 'False', type: 'source', position: 'bottom', valueType: 'string' },
     ],
     properties: [
       { key: 'threshold', label: 'Threshold', type: 'number', min: 0, max: 1, step: 0.05, description: 'Similarity threshold for matching' },
     ],
     defaults: { threshold: 0.7 },
+  },
+  'logic-and': {
+    type: 'logic-and',
+    category: 'if',
+    label: 'AND Gate',
+    color: '#7c4dff',
+    description: 'Outputs the value if ALL condition edges flow',
+    handles: [
+      { id: 'conditions', label: 'Conditions', type: 'target', position: 'left', valueType: 'string', acceptsTypes: ['string'] },
+      { id: 'value', label: 'Value', type: 'target', position: 'top', valueType: 'string' },
+      { id: 'output', label: 'Output', type: 'source', position: 'bottom', valueType: 'string' },
+    ],
+    properties: [],
+    defaults: {},
+  },
+  'logic-or': {
+    type: 'logic-or',
+    category: 'if',
+    label: 'OR Gate',
+    color: '#00bcd4',
+    description: 'Outputs the value if ANY condition edge flows',
+    handles: [
+      { id: 'conditions', label: 'Conditions', type: 'target', position: 'left', valueType: 'string', acceptsTypes: ['string'] },
+      { id: 'value', label: 'Value', type: 'target', position: 'top', valueType: 'string' },
+      { id: 'output', label: 'Output', type: 'source', position: 'bottom', valueType: 'string' },
+    ],
+    properties: [],
+    defaults: {},
   },
   'chat-message': {
     type: 'chat-message',
