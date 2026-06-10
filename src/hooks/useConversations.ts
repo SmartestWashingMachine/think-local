@@ -241,6 +241,20 @@ export function useConversations() {
     });
   }, []);
 
+  const updateUserMessageImage = useCallback((messageId: string, imageData: string) => {
+    setConversations((prev) =>
+      prev.map((c) => {
+        if (c.id !== activeId) return c;
+        return {
+          ...c,
+          messages: c.messages.map((m) =>
+            m.id === messageId ? { ...m, imageData } : m,
+          ),
+        };
+      }),
+    );
+  }, [activeId]);
+
   const exportConversations = useCallback((): Conversation[] => {
     return conversations;
   }, [conversations]);
@@ -257,5 +271,6 @@ export function useConversations() {
     clearMessages,
     importConversations,
     exportConversations,
+    updateUserMessageImage,
   };
 }

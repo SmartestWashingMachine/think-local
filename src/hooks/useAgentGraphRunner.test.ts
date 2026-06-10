@@ -500,6 +500,20 @@ describe('useAgentGraphRunner', () => {
           callback(new Blob(['fake-image-data'], { type: 'image/png' }));
         },
       );
+
+      globalThis.FileReader = class MockFileReader {
+        result: string | null = null;
+        onload: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+
+        readAsDataURL(_blob: Blob) {
+          void _blob;
+          this.result = 'data:image/png;base64,fake-reader-result';
+          this.onload?.();
+        }
+
+        abort() {}
+      } as unknown as typeof FileReader;
     });
 
     it('falls back to text-only when webcam capture fails', async () => {
@@ -592,6 +606,29 @@ describe('useAgentGraphRunner', () => {
         expect.any(Function),
       );
       expect(output).toBe('LLM response');
+    });
+
+    it('calls onUserImageCapture with a data URL when image is captured', async () => {
+      const mockStream = { getTracks: () => [{ stop: vi.fn() }] };
+      navigator.mediaDevices.getUserMedia = vi.fn().mockResolvedValue(mockStream);
+
+      const nodes = createMockNodes(['user-query', 'webcam-image', 'llm', 'chat-message']);
+      const edges: Edge[] = [
+        { id: 'e-uq-wc', source: 'node-0', target: 'node-1', sourceHandle: 'output', targetHandle: 'trigger' },
+        { id: 'e-uq-llm', source: 'node-0', target: 'node-2', sourceHandle: 'output', targetHandle: 'input' },
+        { id: 'e-wc-llm', source: 'node-1', target: 'node-2', sourceHandle: 'output', targetHandle: 'image' },
+        { id: 'e-llm-cm', source: 'node-2', target: 'node-3', sourceHandle: 'output', targetHandle: 'input' },
+      ] as Edge[];
+      const onUserImageCapture = vi.fn();
+      const { result } = renderHook(() => useAgentGraphRunner());
+
+      await result.current.executeGraph(
+        nodes, edges, 'describe this', [], generateCompletionStream, onToken, setAssistantContent,
+        onTrace, undefined, undefined, onUserImageCapture,
+      );
+
+      expect(onUserImageCapture).toHaveBeenCalledTimes(1);
+      expect(onUserImageCapture).toHaveBeenCalledWith('data:image/png;base64,fake-reader-result');
     });
   });
 });

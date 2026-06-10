@@ -38,6 +38,9 @@ export default function MessageList({ messages }: MessageListProps) {
           className={`message message--${msg.role}`}
         >
           <div className="message__bubble">
+            {msg.imageData && (
+              <img className="message__img" src={msg.imageData} alt="Webcam capture" />
+            )}
             <p className="message__content">{msg.content}</p>
             <span className="message__time">{formatTime(msg.createdAt)}</span>
           </div>

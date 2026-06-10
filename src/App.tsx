@@ -57,6 +57,7 @@ export default function App() {
     clearMessages,
     importConversations,
     exportConversations,
+    updateUserMessageImage,
   } = useConversations();
 
   const handleSendMessage = useCallback(
@@ -122,6 +123,7 @@ export default function App() {
           onImportConversations={importConversations}
           onExportConversations={exportConversations}
           clearMessages={clearMessages}
+          updateUserMessageImage={updateUserMessageImage}
           onOpenModelSelector={() => setModelSelectorOpen(true)}
           onOpenEmbeddingModelSelector={() => setEmbeddingModelSelectorOpen(true)}
           onOpenAddDocuments={() => setDocumentUploadOpen(true)}

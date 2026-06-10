@@ -79,6 +79,7 @@ interface AgentGraphViewProps {
     content: string,
     onStream?: (messages: Message[], onToken: (token: string) => void, setAssistantContent: (content: string) => void) => Promise<string>,
   ) => Promise<void>;
+  updateUserMessageImage: (messageId: string, imageData: string) => void;
   modelStatus: string;
   onOpenModelSelector: () => void;
 }
@@ -109,7 +110,7 @@ function saveGraphEdges(edges: Edge[]) {
   localStorage.setItem(STORAGE_KEYS.agentGraphEdges, JSON.stringify(edges));
 }
 
-export default function AgentGraphView({ onClearChat, generateCompletionStream, generateCompletionWithTools, messages, sendMessage, modelStatus, onOpenModelSelector }: AgentGraphViewProps) {
+export default function AgentGraphView({ onClearChat, generateCompletionStream, generateCompletionWithTools, messages, sendMessage, updateUserMessageImage, modelStatus, onOpenModelSelector }: AgentGraphViewProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState(loadGraphNodes() ?? INITIAL_NODES);
   const [edges, setEdges, onEdgesChange] = useEdgesState(loadGraphEdges() ?? INITIAL_EDGES);
 
@@ -287,7 +288,11 @@ export default function AgentGraphView({ onClearChat, generateCompletionStream, 
 
     const collected: TraceEntry[] = [...initialEntries];
     try {
-      await sendMessage(content, async (_history, onToken, setAssistantContent) => {
+      await sendMessage(content, async (history, onToken, setAssistantContent) => {
+        const userMsg = history.length > 0 ? history[history.length - 1] : null;
+        const onUserImageCapture = userMsg
+          ? (dataUrl: string) => updateUserMessageImage(userMsg.id, dataUrl)
+          : undefined;
         const result = await executeGraph(
           nodes, edges, content, messages, generateCompletionStream, onToken, setAssistantContent,
           (entry) => {
@@ -296,6 +301,7 @@ export default function AgentGraphView({ onClearChat, generateCompletionStream, 
           },
           mcpConfig,
           generateCompletionWithTools,
+          onUserImageCapture,
         );
         return result;
       });
@@ -303,7 +309,7 @@ export default function AgentGraphView({ onClearChat, generateCompletionStream, 
       setSending(false);
       inputRef.current?.focus();
     }
-  }, [inputValue, sending, sendMessage, nodes, edges, messages, generateCompletionStream, generateCompletionWithTools, executeGraph, executeTool, getToolDefinitions]);
+  }, [inputValue, sending, sendMessage, updateUserMessageImage, nodes, edges, messages, generateCompletionStream, generateCompletionWithTools, executeGraph, executeTool, getToolDefinitions]);
 
   function formatTime(ts: number): string {
     return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -341,6 +347,9 @@ export default function AgentGraphView({ onClearChat, generateCompletionStream, 
             {messages.map((msg) => (
               <div key={msg.id} className={`agent-graph-view__message agent-graph-view__message--${msg.role}`}>
                 <div className="agent-graph-view__bubble">
+                  {msg.imageData && (
+                    <img className="agent-graph-view__img" src={msg.imageData} alt="Webcam capture" />
+                  )}
                   <p className="agent-graph-view__msg-content">{msg.content}</p>
                   <span className="agent-graph-view__msg-time">{formatTime(msg.createdAt)}</span>
                 </div>

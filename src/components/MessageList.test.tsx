@@ -42,4 +42,30 @@ describe('MessageList', () => {
     expect(screen.getByText('B')).toBeInTheDocument();
     expect(screen.getByText('C')).toBeInTheDocument();
   });
+
+  it('renders an image when message has imageData', () => {
+    const messages: Message[] = [
+      {
+        id: '1',
+        role: 'user',
+        content: 'with photo',
+        createdAt: Date.now(),
+        imageData: 'data:image/png;base64,fake',
+      },
+    ];
+    render(<MessageList messages={messages} />);
+    const img = screen.getByAltText('Webcam capture');
+    expect(img).toBeInTheDocument();
+    expect(img).toHaveAttribute('src', 'data:image/png;base64,fake');
+    expect(screen.getByText('with photo')).toBeInTheDocument();
+  });
+
+  it('does not render an image when message has no imageData', () => {
+    const messages: Message[] = [
+      { id: '1', role: 'user', content: 'text only', createdAt: Date.now() },
+    ];
+    render(<MessageList messages={messages} />);
+    expect(screen.queryByAltText('Webcam capture')).not.toBeInTheDocument();
+    expect(screen.getByText('text only')).toBeInTheDocument();
+  });
 });

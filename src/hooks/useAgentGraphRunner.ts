@@ -36,6 +36,7 @@ interface NodeHandlerContext {
     onToolTrace?: (name: string, args: string, result: string) => void,
   ) => Promise<string>;
   onToolTrace?: (name: string, args: string, result: string) => void;
+  onUserImageCapture?: (dataUrl: string) => void;
 }
 
 type NodeHandler = (ctx: NodeHandlerContext) => Promise<NodeOutputValue>;
@@ -250,7 +251,7 @@ const chatMessageHandler: NodeHandler = async ({ firstStr, setAssistantContent }
   return firstStr;
 };
 
-const webcamImageHandler: NodeHandler = async () => {
+const webcamImageHandler: NodeHandler = async ({ onUserImageCapture }) => {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
     const video = document.createElement('video');
@@ -268,6 +269,16 @@ const webcamImageHandler: NodeHandler = async () => {
     const blob = await new Promise<Blob>((resolve, reject) => {
       canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob failed'))), 'image/png');
     });
+
+    if (onUserImageCapture) {
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error('FileReader failed'));
+        reader.readAsDataURL(blob);
+      });
+      onUserImageCapture(dataUrl);
+    }
 
     return await blob.arrayBuffer();
   } catch (err) {
@@ -350,6 +361,7 @@ export function useAgentGraphRunner() {
       executeTool: (name: string, args: Record<string, unknown>) => Promise<string>,
       onToolTrace?: (name: string, args: string, result: string) => void,
     ) => Promise<string>,
+    onUserImageCapture?: (dataUrl: string) => void,
   ): Promise<string> => {
     const userQueryNode = nodes.find(
       (n) => (n.data as unknown as AgentNodeData).nodeType === 'user-query',
@@ -445,6 +457,7 @@ export function useAgentGraphRunner() {
           mcpSystemMessage: mcpConfig?.systemMessage,
           executeTool: mcpConfig?.executeTool,
           generateCompletionWithTools: generateCompletionWithToolsFn,
+          onUserImageCapture,
           onToolTrace: (name, args, toolResult) => {
             const nodeLabel = `Tool: ${name}`;
             onTrace?.({

@@ -40,6 +40,7 @@ interface ChatProps {
   onAugmentWithRag?: (query: string) => Promise<string>;
   onImportConversations: (conversations: Conversation[]) => void;
   onExportConversations: () => Conversation[];
+  updateUserMessageImage: (messageId: string, imageData: string) => void;
   onOpenModelSelector: () => void;
   onOpenEmbeddingModelSelector: () => void;
   onOpenAddDocuments: () => void;
@@ -67,6 +68,7 @@ export default function Chat({
   onAugmentWithRag,
   onImportConversations,
   onExportConversations,
+  updateUserMessageImage,
   onOpenModelSelector,
   onOpenEmbeddingModelSelector,
   onOpenAddDocuments,
@@ -123,6 +125,7 @@ export default function Chat({
             generateCompletionWithTools={generateCompletionWithTools}
             messages={activeConversation?.messages ?? []}
             sendMessage={sendMessage}
+            updateUserMessageImage={updateUserMessageImage}
             modelStatus={modelStatus}
             onOpenModelSelector={onOpenModelSelector}
           />

@@ -3,6 +3,7 @@ export interface Message {
   role: 'user' | 'assistant';
   content: string;
   createdAt: number;
+  imageData?: string;
 }
 
 export interface Conversation {

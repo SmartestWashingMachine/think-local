@@ -266,6 +266,30 @@ describe('useConversations', () => {
     expect(onStream).toHaveBeenCalledTimes(1);
   });
 
+  it('updates a user message with image data', async () => {
+    const { result } = renderHook(() => useConversations());
+
+    act(() => {
+      result.current.createConversation();
+    });
+
+    await act(async () => {
+      await result.current.sendMessage('Hello');
+    });
+
+    const conv = result.current.activeConversation!;
+    const userMsg = conv.messages[0];
+    expect(userMsg.role).toBe('user');
+    expect(userMsg.imageData).toBeUndefined();
+
+    act(() => {
+      result.current.updateUserMessageImage(userMsg.id, 'data:image/png;base64,test');
+    });
+
+    const updated = result.current.activeConversation!;
+    expect(updated.messages[0].imageData).toBe('data:image/png;base64,test');
+  });
+
   it('does not create an assistant message when onStream throws before setAssistantContent', async () => {
     const { result } = renderHook(() => useConversations());
 

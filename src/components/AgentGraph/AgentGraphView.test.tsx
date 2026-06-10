@@ -50,6 +50,7 @@ describe('AgentGraphView', () => {
   const onBack = vi.fn();
   const generateCompletionStream = vi.fn();
   const sendMessage = vi.fn();
+  const updateUserMessageImage = vi.fn();
   const messages: { id: string; role: 'user' | 'assistant'; content: string; createdAt: number }[] = [];
 
   beforeEach(() => {
@@ -67,6 +68,7 @@ describe('AgentGraphView', () => {
         generateCompletionStream={generateCompletionStream}
         messages={messages}
         sendMessage={sendMessage}
+        updateUserMessageImage={updateUserMessageImage}
         modelStatus="loaded"
       />,
     );
@@ -84,6 +86,7 @@ describe('AgentGraphView', () => {
         generateCompletionStream={generateCompletionStream}
         messages={messages}
         sendMessage={sendMessage}
+        updateUserMessageImage={updateUserMessageImage}
         modelStatus="loaded"
       />,
     );
@@ -99,6 +102,7 @@ describe('AgentGraphView', () => {
         generateCompletionStream={generateCompletionStream}
         messages={messages}
         sendMessage={sendMessage}
+        updateUserMessageImage={updateUserMessageImage}
         modelStatus="loaded"
       />,
     );
@@ -121,6 +125,7 @@ describe('AgentGraphView', () => {
         generateCompletionStream={generateCompletionStream}
         messages={messages}
         sendMessage={sendMessage}
+        updateUserMessageImage={updateUserMessageImage}
         modelStatus="loaded"
       />,
     );
@@ -165,6 +170,7 @@ describe('AgentGraphView', () => {
         generateCompletionStream={generateCompletionStream}
         messages={messages}
         sendMessage={sendMessage}
+        updateUserMessageImage={updateUserMessageImage}
         modelStatus="loaded"
       />,
     );
@@ -191,6 +197,7 @@ describe('AgentGraphView', () => {
         generateCompletionStream={generateCompletionStream}
         messages={messages}
         sendMessage={sendMessage}
+        updateUserMessageImage={updateUserMessageImage}
         modelStatus="loaded"
       />,
     );
@@ -199,5 +206,56 @@ describe('AgentGraphView', () => {
       'secret-chatter-agent-graph-nodes',
       '[]',
     );
+  });
+
+  it('renders a user message with a webcam image', () => {
+    const msgs = [
+      {
+        id: '1',
+        role: 'user' as const,
+        content: 'describe this',
+        createdAt: Date.now(),
+        imageData: 'data:image/png;base64,fake',
+      },
+    ];
+    render(
+      <AgentGraphView
+        onBack={onBack}
+        onClearChat={vi.fn()}
+        generateCompletionStream={generateCompletionStream}
+        messages={msgs}
+        sendMessage={sendMessage}
+        updateUserMessageImage={updateUserMessageImage}
+        modelStatus="loaded"
+      />,
+    );
+    const img = screen.getByAltText('Webcam capture');
+    expect(img).toBeInTheDocument();
+    expect(img).toHaveAttribute('src', 'data:image/png;base64,fake');
+    expect(screen.getByText('describe this')).toBeInTheDocument();
+  });
+
+  it('does not render image when message has no imageData', () => {
+    const msgs = [
+      {
+        id: '1',
+        role: 'user' as const,
+        content: 'just text',
+        createdAt: Date.now(),
+      },
+    ];
+    render(
+      <AgentGraphView
+        onBack={onBack}
+        onClearChat={vi.fn()}
+        generateCompletionStream={generateCompletionStream}
+        messages={msgs}
+        sendMessage={sendMessage}
+        updateUserMessageImage={updateUserMessageImage}
+        modelStatus="loaded"
+      />,
+    );
+    expect(screen.queryByAltText('Webcam capture')).not.toBeInTheDocument();
+    expect(screen.getByText('just text')).toBeInTheDocument();
   });
 });
