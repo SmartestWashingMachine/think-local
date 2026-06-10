@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   useNodesState,
   useEdgesState,
@@ -12,13 +12,10 @@ import type { AgentNodeType, AgentNodeData, TraceEntry } from '../../types/agent
 import { AGENT_NODE_DEFINITIONS } from '../../types/agentGraph';
 import type { Message } from '../../types/chat';
 import { STORAGE_KEYS } from '../../constants/chat';
-import { useAgentGraphRunner } from '../../hooks/useAgentGraphRunner';
-import { useMCP } from '../../hooks/useMCP';
-import { generateSystemMessage } from '../../types/mcp';
-import type { MCPToolType } from '../../types/mcp';
 import type { ChatCompletionTool, ChatCompletionMessage } from '@wllama/wllama/esm/types/oai-compat';
 import GraphCanvas from './GraphCanvas';
 import RightPane from './RightPane';
+import AgentChat from './AgentChat';
 import './AgentGraphView.css';
 
 function createNode(type: AgentNodeType, position: { x: number; y: number }, id?: string): Node {
@@ -122,19 +119,19 @@ export default function AgentGraphView({ onClearChat, generateCompletionStream, 
     saveGraphEdges(edges);
   }, [edges]);
   const [rightPaneTab, setRightPaneTab] = useState<RightPaneTab>('info');
-  const [sending, setSending] = useState(false);
-  const [inputValue, setInputValue] = useState('');
   const [traceEntries, setTraceEntries] = useState<TraceEntry[]>([]);
-  const { executeGraph } = useAgentGraphRunner();
-  const { executeTool, getToolDefinitions } = useMCP();
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-  const messagesRef = useRef<HTMLDivElement>(null);
+  const traceRef = useRef<TraceEntry[]>([]);
 
-  useEffect(() => {
-    if (messagesRef.current) {
-      messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
-    }
-  }, [messages]);
+  const handleBeforeSend = useCallback(() => {
+    traceRef.current = [];
+    setTraceEntries([]);
+    setRightPaneTab('trace');
+  }, []);
+
+  const handleTraceEntry = useCallback((entry: TraceEntry) => {
+    traceRef.current.push(entry);
+    setTraceEntries([...traceRef.current]);
+  }, []);
 
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
@@ -218,103 +215,6 @@ export default function AgentGraphView({ onClearChat, generateCompletionStream, 
     [setNodes],
   );
 
-  const handleSend = useCallback(async () => {
-    const content = inputValue.trim();
-    if (!content || sending) return;
-    setInputValue('');
-    setSending(true);
-    setRightPaneTab('trace');
-
-    const mcpNode = nodes.find((n) => (n.data as unknown as AgentNodeData).nodeType === 'mcp');
-    let mcpConfig: { systemMessage: string; tools: ChatCompletionTool[]; executeTool: (name: string, args: Record<string, unknown>) => Promise<string> } | null = null;
-    let systemMessageContent = '';
-    if (mcpNode) {
-      const mcpData = mcpNode.data as unknown as AgentNodeData;
-      const enabledToolTypes: MCPToolType[] = [];
-      if (mcpData.currentDateEnabled) enabledToolTypes.push('current-date');
-      if (mcpData.calculatorEnabled) enabledToolTypes.push('calculator');
-      if (mcpData.sayOutLoudEnabled) enabledToolTypes.push('say-out-loud');
-      if (mcpData.regexFilterEnabled) enabledToolTypes.push('regex-filter');
-      systemMessageContent = (mcpData.systemMessage as string) || (enabledToolTypes.length > 0 ? generateSystemMessage(enabledToolTypes) : '');
-      if (enabledToolTypes.length > 0) {
-        mcpConfig = {
-          systemMessage: systemMessageContent,
-          tools: getToolDefinitions(enabledToolTypes),
-          executeTool,
-        };
-      }
-    }
-
-    const preview = (val: string, max = 200) =>
-      val.length > max ? val.slice(0, max) + '...' : val;
-
-    const initialEntries: TraceEntry[] = [];
-
-    if (mcpNode && mcpConfig && systemMessageContent) {
-      initialEntries.push({
-        id: crypto.randomUUID(),
-        timestamp: Date.now(),
-        nodeId: mcpNode.id,
-        nodeLabel: 'System Message',
-        nodeType: 'system-message',
-        type: 'input',
-        description: systemMessageContent,
-      });
-    }
-
-    for (const msg of messages) {
-      initialEntries.push({
-        id: crypto.randomUUID(),
-        timestamp: msg.createdAt,
-        nodeId: 'chat-history',
-        nodeLabel: msg.role === 'user' ? 'User' : 'Assistant',
-        nodeType: msg.role === 'user' ? 'user-query' : 'chat-message',
-        type: msg.role === 'user' ? 'input' : 'output',
-        description: preview(msg.content),
-      });
-    }
-
-    initialEntries.push({
-      id: crypto.randomUUID(),
-      timestamp: Date.now(),
-      nodeId: 'chat-history',
-      nodeLabel: 'User',
-      nodeType: 'user-query',
-      type: 'input',
-      description: preview(content),
-    });
-
-    setTraceEntries(initialEntries);
-
-    const collected: TraceEntry[] = [...initialEntries];
-    try {
-      await sendMessage(content, async (history, onToken, setAssistantContent) => {
-        const userMsg = history.length > 0 ? history[history.length - 1] : null;
-        const onUserImageCapture = userMsg
-          ? (dataUrl: string) => updateUserMessageImage(userMsg.id, dataUrl)
-          : undefined;
-        const result = await executeGraph(
-          nodes, edges, content, messages, generateCompletionStream, onToken, setAssistantContent,
-          (entry) => {
-            collected.push(entry);
-            setTraceEntries([...collected]);
-          },
-          mcpConfig,
-          generateCompletionWithTools,
-          onUserImageCapture,
-        );
-        return result;
-      });
-    } finally {
-      setSending(false);
-      inputRef.current?.focus();
-    }
-  }, [inputValue, sending, sendMessage, updateUserMessageImage, nodes, edges, messages, generateCompletionStream, generateCompletionWithTools, executeGraph, executeTool, getToolDefinitions]);
-
-  function formatTime(ts: number): string {
-    return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-
   return (
     <div className="agent-graph-view">
       <div className="agent-graph-view__body">
@@ -339,73 +239,18 @@ export default function AgentGraphView({ onClearChat, generateCompletionStream, 
             traceEntries={traceEntries}
           />
         </div>
-        <div className="agent-graph-view__chat">
-          <div className="agent-graph-view__messages" ref={messagesRef}>
-            {messages.length === 0 && (
-              <p className="agent-graph-view__empty-msg">Type a message to run the graph.</p>
-            )}
-            {messages.map((msg) => (
-              <div key={msg.id} className={`agent-graph-view__message agent-graph-view__message--${msg.role}`}>
-                <div className="agent-graph-view__bubble">
-                  {msg.imageData && (
-                    <img className="agent-graph-view__img" src={msg.imageData} alt="Webcam capture" />
-                  )}
-                  <p className="agent-graph-view__msg-content">{msg.content}</p>
-                  <span className="agent-graph-view__msg-time">{formatTime(msg.createdAt)}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="agent-graph-view__input-area">
-            {modelStatus !== 'loaded' && (
-              <button className="agent-graph-view__model-warning" onClick={onOpenModelSelector} type="button">
-                No model loaded. Select a model first.
-              </button>
-            )}
-            <div className="agent-graph-view__input-row">
-              <textarea
-                ref={inputRef}
-                className="agent-graph-view__input"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-                placeholder="Type a message to run the graph..."
-                rows={1}
-                disabled={sending}
-              />
-              <button
-                className="agent-graph-view__send-btn"
-                onClick={handleSend}
-                disabled={sending || !inputValue.trim() || modelStatus !== 'loaded'}
-                type="button"
-              >
-                {sending ? '...' : (
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="22" y1="2" x2="11" y2="13" />
-                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                  </svg>
-                )}
-                {!sending && 'Send'}
-              </button>
-              <button
-                className="agent-graph-view__clear-btn"
-                onClick={onClearChat}
-                type="button"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="3 6 5 6 21 6" />
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                </svg>
-                Clear
-              </button>
-            </div>
-          </div>
-        </div>
+        <AgentChat
+          messages={messages}
+          sendMessage={sendMessage}
+          onClearChat={onClearChat}
+          updateUserMessageImage={updateUserMessageImage}
+          generateCompletionStream={generateCompletionStream}
+          generateCompletionWithTools={generateCompletionWithTools}
+          modelStatus={modelStatus}
+          onOpenModelSelector={onOpenModelSelector}
+          onBeforeSend={handleBeforeSend}
+          onTraceEntry={handleTraceEntry}
+        />
       </div>
     </div>
   );

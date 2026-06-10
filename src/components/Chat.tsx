@@ -1,13 +1,10 @@
-import { useState } from 'react';
 import type { Conversation, ViewState, Message } from '../types/chat';
 import type { ChatCompletionTool, ChatCompletionMessage } from '@wllama/wllama/esm/types/oai-compat';
 import type { StoredDocument } from '../types/rag';
-import { RAG_FIRST_MESSAGE_TEMPLATE, RAG_DEFAULT_TEMPLATE } from '../constants/rag';
 import Sidebar from './Sidebar';
-import MessageList from './MessageList';
-import MessageInput from './MessageInput';
 import RagView from './RagView';
 import AgentGraphView from './AgentGraph/AgentGraphView';
+import AgentChat from './AgentGraph/AgentChat';
 import './Chat.css';
 
 interface ChatProps {
@@ -20,7 +17,6 @@ interface ChatProps {
   onCreateConversation: () => string;
   onSwitchConversation: (id: string) => void;
   onDeleteConversation: (id: string) => void;
-  onSendMessage: (content: string) => Promise<void>;
   sendMessage: (
     content: string,
     onStream?: (messages: Message[], onToken: (token: string) => void, setAssistantContent: (content: string) => void) => Promise<string>,
@@ -37,7 +33,6 @@ interface ChatProps {
     executeTool: (name: string, args: Record<string, unknown>) => Promise<string>,
     onToolTrace?: (name: string, args: string, result: string) => void,
   ) => Promise<string>;
-  onAugmentWithRag?: (query: string) => Promise<string>;
   onImportConversations: (conversations: Conversation[]) => void;
   onExportConversations: () => Conversation[];
   updateUserMessageImage: (messageId: string, imageData: string) => void;
@@ -60,12 +55,10 @@ export default function Chat({
   onCreateConversation,
   onSwitchConversation,
   onDeleteConversation,
-  onSendMessage,
   sendMessage,
   clearMessages,
   generateCompletionStream,
   generateCompletionWithTools,
-  onAugmentWithRag,
   onImportConversations,
   onExportConversations,
   updateUserMessageImage,
@@ -77,28 +70,6 @@ export default function Chat({
   embeddingModelStatus,
   ragDocuments,
 }: ChatProps) {
-  const [sending, setSending] = useState(false);
-  const [ragEnabled, setRagEnabled] = useState(false);
-
-  async function handleSend(content: string) {
-    setSending(true);
-    try {
-      let finalContent = content;
-      if (ragEnabled && activeConversation) {
-        if (activeConversation.messages.length === 0 && onAugmentWithRag) {
-          finalContent = await onAugmentWithRag(content);
-        } else {
-          finalContent = activeConversation.messages.length === 0
-            ? RAG_FIRST_MESSAGE_TEMPLATE(content)
-            : RAG_DEFAULT_TEMPLATE(content);
-        }
-      }
-      await onSendMessage(finalContent);
-    } finally {
-      setSending(false);
-    }
-  }
-
   return (
     <div className="chat">
       <Sidebar
@@ -141,10 +112,17 @@ export default function Chat({
             <p>Select a conversation or create a new one to start chatting.</p>
           </div>
         ) : (
-          <>
-            <MessageList messages={activeConversation.messages} />
-            <MessageInput onSend={handleSend} disabled={sending} ragEnabled={ragEnabled} onToggleRag={() => setRagEnabled((v) => !v)} />
-          </>
+          <AgentChat
+            expanded
+            messages={activeConversation.messages}
+            sendMessage={sendMessage}
+            onClearChat={clearMessages}
+            updateUserMessageImage={updateUserMessageImage}
+            generateCompletionStream={generateCompletionStream}
+            generateCompletionWithTools={generateCompletionWithTools}
+            modelStatus={modelStatus}
+            onOpenModelSelector={onOpenModelSelector}
+          />
         )}
       </main>
     </div>

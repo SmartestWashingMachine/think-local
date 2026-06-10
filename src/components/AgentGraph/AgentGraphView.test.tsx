@@ -46,6 +46,12 @@ vi.mock('./RightPane', () => ({
   },
 }));
 
+vi.mock('./AgentChat', () => ({
+  default: function MockAgentChat() {
+    return <div data-testid="agent-chat">Agent Chat</div>;
+  },
+}));
+
 describe('AgentGraphView', () => {
   const onBack = vi.fn();
   const generateCompletionStream = vi.fn();
@@ -59,7 +65,7 @@ describe('AgentGraphView', () => {
     localStorageMock.clear();
   });
 
-  it('renders the graph canvas, right pane, and clear button', () => {
+  it('renders the graph canvas, right pane, and agent chat', () => {
     const onClearChat = vi.fn();
     render(
       <AgentGraphView
@@ -74,24 +80,7 @@ describe('AgentGraphView', () => {
     );
     expect(screen.getByTestId('graph-canvas')).toBeInTheDocument();
     expect(screen.getByTestId('right-pane')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /clear/i })).toBeInTheDocument();
-  });
-
-  it('calls onClearChat when clear button is clicked', () => {
-    const onClearChat = vi.fn();
-    render(
-      <AgentGraphView
-        onBack={onBack}
-        onClearChat={onClearChat}
-        generateCompletionStream={generateCompletionStream}
-        messages={messages}
-        sendMessage={sendMessage}
-        updateUserMessageImage={updateUserMessageImage}
-        modelStatus="loaded"
-      />,
-    );
-    screen.getByRole('button', { name: /clear/i }).click();
-    expect(onClearChat).toHaveBeenCalled();
+    expect(screen.getByTestId('agent-chat')).toBeInTheDocument();
   });
 
   it('passes onUpdateNodeData to RightPane', () => {
@@ -201,61 +190,9 @@ describe('AgentGraphView', () => {
         modelStatus="loaded"
       />,
     );
-    // On mount, nodes are set via useNodesState (mocked to return []) so useEffect fires but saves []
     expect(localStorageMock.setItem).toHaveBeenCalledWith(
       'secret-chatter-agent-graph-nodes',
       '[]',
     );
-  });
-
-  it('renders a user message with a webcam image', () => {
-    const msgs = [
-      {
-        id: '1',
-        role: 'user' as const,
-        content: 'describe this',
-        createdAt: Date.now(),
-        imageData: 'data:image/png;base64,fake',
-      },
-    ];
-    render(
-      <AgentGraphView
-        onBack={onBack}
-        onClearChat={vi.fn()}
-        generateCompletionStream={generateCompletionStream}
-        messages={msgs}
-        sendMessage={sendMessage}
-        updateUserMessageImage={updateUserMessageImage}
-        modelStatus="loaded"
-      />,
-    );
-    const img = screen.getByAltText('Webcam capture');
-    expect(img).toBeInTheDocument();
-    expect(img).toHaveAttribute('src', 'data:image/png;base64,fake');
-    expect(screen.getByText('describe this')).toBeInTheDocument();
-  });
-
-  it('does not render image when message has no imageData', () => {
-    const msgs = [
-      {
-        id: '1',
-        role: 'user' as const,
-        content: 'just text',
-        createdAt: Date.now(),
-      },
-    ];
-    render(
-      <AgentGraphView
-        onBack={onBack}
-        onClearChat={vi.fn()}
-        generateCompletionStream={generateCompletionStream}
-        messages={msgs}
-        sendMessage={sendMessage}
-        updateUserMessageImage={updateUserMessageImage}
-        modelStatus="loaded"
-      />,
-    );
-    expect(screen.queryByAltText('Webcam capture')).not.toBeInTheDocument();
-    expect(screen.getByText('just text')).toBeInTheDocument();
   });
 });
