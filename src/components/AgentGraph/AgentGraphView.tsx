@@ -29,13 +29,15 @@ function createNode(type: AgentNodeType, position: { x: number; y: number }, id?
 }
 
 const USER_QUERY_NODE = createNode('user-query', { x: 100, y: 200 });
+const USER_IMAGE_NODE = createNode('user-image', { x: 100, y: 360 });
 const LLM_NODE = createNode('llm', { x: 350, y: 200 });
 const CHAT_MESSAGE_NODE = createNode('chat-message', { x: 600, y: 200 });
 
 const USER_QUERY_NODE_ID = USER_QUERY_NODE.id;
+const USER_IMAGE_NODE_ID = USER_IMAGE_NODE.id;
 const CHAT_MESSAGE_NODE_ID = CHAT_MESSAGE_NODE.id;
 
-const INITIAL_NODES = [USER_QUERY_NODE, LLM_NODE, CHAT_MESSAGE_NODE];
+const INITIAL_NODES = [USER_QUERY_NODE, USER_IMAGE_NODE, LLM_NODE, CHAT_MESSAGE_NODE];
 const INITIAL_EDGES: Edge[] = [
   {
     id: crypto.randomUUID(),
@@ -43,6 +45,14 @@ const INITIAL_EDGES: Edge[] = [
     target: LLM_NODE.id,
     sourceHandle: 'output',
     targetHandle: 'input',
+    style: { stroke: '#666', strokeWidth: 2 },
+  } as Edge,
+  {
+    id: crypto.randomUUID(),
+    source: USER_IMAGE_NODE_ID,
+    target: LLM_NODE.id,
+    sourceHandle: 'output',
+    targetHandle: 'image',
     style: { stroke: '#666', strokeWidth: 2 },
   } as Edge,
   {
@@ -136,7 +146,7 @@ export default function AgentGraphView({ onClearChat, generateCompletionStream, 
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
       const filtered = changes.filter((change) => {
-        if (change.type === 'remove' && (change.id === USER_QUERY_NODE_ID || change.id === CHAT_MESSAGE_NODE_ID)) {
+        if (change.type === 'remove' && (change.id === USER_QUERY_NODE_ID || change.id === USER_IMAGE_NODE_ID || change.id === CHAT_MESSAGE_NODE_ID)) {
           return false;
         }
         return true;

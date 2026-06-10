@@ -68,7 +68,15 @@ function topologicalSort(nodes: Node[], edges: Edge[], rootId: string): string[]
     inDegree.set(edge.target, (inDegree.get(edge.target) ?? 0) + 1);
   }
 
-  const queue = [rootId];
+  const queue: string[] = [];
+  for (const [nodeId, deg] of inDegree) {
+    if (deg === 0) queue.push(nodeId);
+  }
+  const rootIdx = queue.indexOf(rootId);
+  if (rootIdx > 0) {
+    queue.splice(rootIdx, 1);
+    queue.unshift(rootId);
+  }
   const order: string[] = [];
 
   while (queue.length > 0) {
@@ -374,11 +382,16 @@ export function useAgentGraphRunner() {
       onToolTrace?: (name: string, args: string, result: string) => void,
     ) => Promise<string>,
     onUserImageCapture?: (dataUrl: string) => void,
+    userImageData?: ArrayBuffer,
   ): Promise<string> => {
     const userQueryNode = nodes.find(
       (n) => (n.data as unknown as AgentNodeData).nodeType === 'user-query',
     );
     if (!userQueryNode) return userInput;
+
+    const userImageNode = nodes.find(
+      (n) => (n.data as unknown as AgentNodeData).nodeType === 'user-image',
+    );
 
     const mcpNode = nodes.find(
       (n) => (n.data as unknown as AgentNodeData).nodeType === 'mcp',
@@ -400,11 +413,19 @@ export function useAgentGraphRunner() {
     const outputs = new Map<string, NodeOutputValue>();
     const handleOutputs = new Map<string, Map<string, NodeOutputValue>>();
     outputs.set(userQueryNode.id, userInput);
+    if (userImageNode && userImageData) {
+      outputs.set(userImageNode.id, userImageData);
+    }
+
+    if (userImageNode && userImageData) {
+      addTrace(userImageNode, 'output', `(user image: ${userImageData.byteLength} bytes)`);
+    }
 
     const topoOrder = topologicalSort(nodes, edges, userQueryNode.id);
 
     for (const nodeId of topoOrder) {
       if (nodeId === userQueryNode.id) continue;
+      if (userImageNode && nodeId === userImageNode.id) continue;
 
       const node = nodes.find((n) => n.id === nodeId)!;
       const nodeData = node.data as unknown as AgentNodeData;

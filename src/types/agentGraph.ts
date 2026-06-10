@@ -1,5 +1,6 @@
 export type AgentNodeType =
   | 'user-query'
+  | 'user-image'
   | 'webcam-image'
   | 'llm'
   | 'rag'
@@ -87,6 +88,18 @@ export const AGENT_NODE_DEFINITIONS: Record<AgentNodeType, AgentNodeDefinition> 
     description: 'The initial user input — always present',
     handles: [
       { id: 'output', label: 'Query', type: 'source', position: 'bottom', valueType: 'string' },
+    ],
+    properties: [],
+    defaults: {},
+  },
+  'user-image': {
+    type: 'user-image',
+    category: 'input',
+    label: 'User Image',
+    color: '#4caf50',
+    description: 'An image attached by the user to their message',
+    handles: [
+      { id: 'output', label: 'Image', type: 'source', position: 'bottom', valueType: 'image' },
     ],
     properties: [],
     defaults: {},

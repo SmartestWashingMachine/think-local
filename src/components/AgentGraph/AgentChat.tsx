@@ -37,6 +37,7 @@ interface AgentChatProps {
   sendMessage: (
     content: string,
     onStream?: (messages: Message[], onToken: (token: string) => void, setAssistantContent: (content: string) => void) => Promise<string>,
+    imageData?: string,
   ) => Promise<void>;
   onClearChat: () => void;
   updateUserMessageImage: (messageId: string, imageData: string) => void;
@@ -73,10 +74,32 @@ export default function AgentChat({
 }: AgentChatProps) {
   const [sending, setSending] = useState(false);
   const [inputValue, setInputValue] = useState('');
+  const [attachedImageDataUrl, setAttachedImageDataUrl] = useState<string | null>(null);
+  const [attachedImageFile, setAttachedImageFile] = useState<File | null>(null);
   const { executeGraph } = useAgentGraphRunner();
   const { executeTool, getToolDefinitions } = useMCP();
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAttachedImageFile(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setAttachedImageDataUrl(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+    if (imageInputRef.current) {
+      imageInputRef.current.value = '';
+    }
+  }, []);
+
+  const handleRemoveImage = useCallback(() => {
+    setAttachedImageDataUrl(null);
+    setAttachedImageFile(null);
+  }, []);
 
   useEffect(() => {
     if (messagesRef.current) {
@@ -87,7 +110,11 @@ export default function AgentChat({
   const handleSend = useCallback(async () => {
     const content = inputValue.trim();
     if (!content || sending) return;
+    const imageDataUrl = attachedImageDataUrl;
+    const imageFile = attachedImageFile;
     setInputValue('');
+    setAttachedImageDataUrl(null);
+    setAttachedImageFile(null);
     setSending(true);
 
     const nodes = loadGraphNodes() ?? [];
@@ -156,27 +183,36 @@ export default function AgentChat({
     });
 
     try {
-      await sendMessage(content, async (history, onToken, setAssistantContent) => {
-        const userMsg = history.length > 0 ? history[history.length - 1] : null;
-        const onUserImageCapture = userMsg
-          ? (dataUrl: string) => updateUserMessageImage(userMsg.id, dataUrl)
-          : undefined;
-        const result = await executeGraph(
-          nodes, edges, content, messages, generateCompletionStream, onToken, setAssistantContent,
-          (entry) => {
-            onTraceEntry?.(entry);
-          },
-          mcpConfig,
-          generateCompletionWithTools,
-          onUserImageCapture,
-        );
-        return result;
-      });
+      let userImageArrayBuffer: ArrayBuffer | undefined;
+      if (imageFile) {
+        userImageArrayBuffer = await imageFile.arrayBuffer();
+      }
+      await sendMessage(
+        content,
+        async (history, onToken, setAssistantContent) => {
+          const userMsg = history.length > 0 ? history[history.length - 1] : null;
+          const onUserImageCapture = userMsg
+            ? (dataUrl: string) => updateUserMessageImage(userMsg.id, dataUrl)
+            : undefined;
+          const result = await executeGraph(
+            nodes, edges, content, messages, generateCompletionStream, onToken, setAssistantContent,
+            (entry) => {
+              onTraceEntry?.(entry);
+            },
+            mcpConfig,
+            generateCompletionWithTools,
+            onUserImageCapture,
+            userImageArrayBuffer,
+          );
+          return result;
+        },
+        imageDataUrl ?? undefined,
+      );
     } finally {
       setSending(false);
       inputRef.current?.focus();
     }
-  }, [inputValue, sending, sendMessage, updateUserMessageImage, messages, generateCompletionStream, generateCompletionWithTools, executeGraph, executeTool, getToolDefinitions, onBeforeSend, onTraceEntry]);
+  }, [inputValue, sending, attachedImageDataUrl, attachedImageFile, sendMessage, updateUserMessageImage, messages, generateCompletionStream, generateCompletionWithTools, executeGraph, executeTool, getToolDefinitions, onBeforeSend, onTraceEntry]);
 
   const rootClass = expanded ? 'agent-chat agent-chat--expanded' : 'agent-chat';
 
@@ -204,6 +240,42 @@ export default function AgentChat({
             No model loaded. Select a model first.
           </button>
         )}
+        <div className="agent-chat__input-toolbar">
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleImageSelect}
+            hidden
+          />
+          <button
+            className="agent-chat__image-btn"
+            onClick={() => imageInputRef.current?.click()}
+            type="button"
+            title="Attach image"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <circle cx="8.5" cy="8.5" r="1.5" />
+              <polyline points="21 15 16 10 5 21" />
+            </svg>
+          </button>
+          {attachedImageDataUrl && (
+            <div className="agent-chat__image-preview">
+              <img src={attachedImageDataUrl} alt="Attached" />
+              <button
+                className="agent-chat__image-remove"
+                onClick={handleRemoveImage}
+                type="button"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+          )}
+        </div>
         <div className="agent-chat__input-row">
           <textarea
             ref={inputRef}

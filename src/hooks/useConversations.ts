@@ -99,6 +99,7 @@ export function useConversations() {
         onToken: (token: string) => void,
         setAssistantContent: (content: string) => void,
       ) => Promise<string>,
+      imageData?: string,
     ) => {
       if (!activeId || !activeConversation) return;
 
@@ -107,6 +108,7 @@ export function useConversations() {
         role: 'user',
         content,
         createdAt: Date.now(),
+        imageData,
       };
 
       const messagesAfterUser = [...activeConversation.messages, userMessage];
