@@ -4,6 +4,11 @@ import type { Node, Edge } from '@xyflow/react';
 import type { SearchResult } from '../types/rag';
 import { useAgentGraphRunner } from './useAgentGraphRunner';
 
+const mockSpeakText = vi.fn();
+vi.mock('../lib/tts', () => ({
+  speakText: (...args: unknown[]) => mockSpeakText(...args),
+}));
+
 const mockGenerateEmbedding = vi.fn();
 const mockVectorSearch = vi.fn();
 
@@ -21,7 +26,7 @@ function createMockNodes(types: string[]): Node[] {
     id: `node-${i}`,
     type: type === 'user-query' || type === 'webcam-image' ? 'input' :
       type === 'if-string-contains' || type === 'if-closest-document' || type === 'logic-and' || type === 'logic-or' ? 'if' :
-      type === 'chat-message' ? 'output' : 'process',
+      type === 'chat-message' || type === 'tts' ? 'output' : 'process',
     position: { x: i * 250, y: 200 },
     data: {
       nodeType: type,
@@ -629,6 +634,61 @@ describe('useAgentGraphRunner', () => {
 
       expect(onUserImageCapture).toHaveBeenCalledTimes(1);
       expect(onUserImageCapture).toHaveBeenCalledWith('data:image/png;base64,fake-reader-result');
+    });
+  });
+
+  describe('TTS node', () => {
+    it('calls speakText with the input text and default voice', async () => {
+      mockSpeakText.mockResolvedValue(undefined);
+
+      const nodes = createMockNodes(['user-query', 'tts', 'chat-message']);
+      const edges = createEdges(nodes.map((n) => n.id));
+      const { result } = renderHook(() => useAgentGraphRunner());
+
+      const output = await result.current.executeGraph(nodes, edges, 'say hello', [], generateCompletionStream, onToken, setAssistantContent, onTrace);
+
+      expect(mockSpeakText).toHaveBeenCalledTimes(1);
+      expect(mockSpeakText).toHaveBeenCalledWith('say hello', 'af_bella');
+      expect(output).toBe('say hello');
+    });
+
+    it('uses voice from node data', async () => {
+      mockSpeakText.mockResolvedValue(undefined);
+
+      const nodes = createMockNodes(['user-query', 'tts', 'chat-message']);
+      (nodes[1].data as Record<string, unknown>).voice = 'am_liam';
+      const edges = createEdges(nodes.map((n) => n.id));
+      const { result } = renderHook(() => useAgentGraphRunner());
+
+      await result.current.executeGraph(nodes, edges, 'hello', [], generateCompletionStream, onToken, setAssistantContent, onTrace);
+
+      expect(mockSpeakText).toHaveBeenCalledWith('hello', 'am_liam');
+    });
+
+    it('passes through text even when speakText fails', async () => {
+      mockSpeakText.mockRejectedValue(new Error('model load failed'));
+
+      const nodes = createMockNodes(['user-query', 'tts', 'chat-message']);
+      const edges = createEdges(nodes.map((n) => n.id));
+      const { result } = renderHook(() => useAgentGraphRunner());
+
+      const output = await result.current.executeGraph(nodes, edges, 'hello', [], generateCompletionStream, onToken, setAssistantContent, onTrace);
+
+      expect(mockSpeakText).toHaveBeenCalledTimes(1);
+      expect(output).toBe('hello');
+    });
+
+    it('works standalone without chat-message node', async () => {
+      mockSpeakText.mockResolvedValue(undefined);
+
+      const nodes = createMockNodes(['user-query', 'tts']);
+      const edges = createEdges(nodes.map((n) => n.id));
+      const { result } = renderHook(() => useAgentGraphRunner());
+
+      const output = await result.current.executeGraph(nodes, edges, 'hello', [], generateCompletionStream, onToken, setAssistantContent, onTrace);
+
+      expect(mockSpeakText).toHaveBeenCalledTimes(1);
+      expect(output).toBe('');
     });
   });
 });

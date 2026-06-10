@@ -10,7 +10,8 @@ export type AgentNodeType =
   | 'logic-and'
   | 'logic-or'
   | 'chat-message'
-  | 'mcp';
+  | 'mcp'
+  | 'tts';
 
 export type AgentNodeCategory = 'input' | 'process' | 'if' | 'output' | 'mcp';
 
@@ -238,6 +239,39 @@ export const AGENT_NODE_DEFINITIONS: Record<AgentNodeType, AgentNodeDefinition> 
     ],
     properties: [],
     defaults: {},
+  },
+  tts: {
+    type: 'tts',
+    category: 'output',
+    label: 'TTS',
+    color: '#e91e63',
+    description: 'Converts text to speech using Kokoro TTS and plays it aloud',
+    handles: [
+      { id: 'input', label: 'Input', type: 'target', position: 'top', valueType: 'string' },
+    ],
+    properties: [
+      {
+        key: 'voice', label: 'Voice', type: 'select',
+        description: 'The voice to use for speech synthesis',
+        options: [
+          { label: '🇺🇸 af_bella (F)', value: 'af_bella' },
+          { label: '🇺🇸 af_heart (F)', value: 'af_heart' },
+          { label: '🇺🇸 af_nicole (F)', value: 'af_nicole' },
+          { label: '🇺🇸 af_sarah (F)', value: 'af_sarah' },
+          { label: '🇺🇸 af_sky (F)', value: 'af_sky' },
+          { label: '🇺🇸 am_adam (M)', value: 'am_adam' },
+          { label: '🇺🇸 am_echo (M)', value: 'am_echo' },
+          { label: '🇺🇸 am_fenrir (M)', value: 'am_fenrir' },
+          { label: '🇺🇸 am_liam (M)', value: 'am_liam' },
+          { label: '🇺🇸 am_onyx (M)', value: 'am_onyx' },
+          { label: '🇬🇧 bf_emma (F)', value: 'bf_emma' },
+          { label: '🇬🇧 bf_isabella (F)', value: 'bf_isabella' },
+          { label: '🇬🇧 bm_fable (M)', value: 'bm_fable' },
+          { label: '🇬🇧 bm_george (M)', value: 'bm_george' },
+        ],
+      },
+    ],
+    defaults: { voice: 'af_bella' },
   },
   mcp: {
     type: 'mcp',

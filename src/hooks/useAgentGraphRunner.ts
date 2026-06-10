@@ -7,6 +7,7 @@ import { search as vectorSearch } from '../ai/vectorStore';
 import type { ChatCompletionTool } from '../types/mcp';
 import type { ChatCompletionMessage, ChatCompletionMessageContent } from '@wllama/wllama/esm/types/oai-compat';
 import type { Message } from '../types/chat';
+import { speakText } from '../lib/tts';
 
 type NodeOutputValue = string | string[] | ArrayBuffer | null;
 
@@ -323,6 +324,16 @@ const orHandler: NodeHandler = async ({ incomingEdges, outputs, handleOutputs })
   return typeof val === 'string' ? val : null;
 };
 
+const ttsHandler: NodeHandler = async ({ firstStr, nodeData }) => {
+  const voice = (nodeData.voice as string) ?? 'af_bella';
+  try {
+    await speakText(firstStr, voice);
+  } catch (err) {
+    console.warn('[AgentGraph] TTS failed:', err);
+  }
+  return firstStr;
+};
+
 const HANDLERS: Partial<Record<AgentNodeType, NodeHandler>> = {
   llm: llmHandler,
   rag: ragHandler,
@@ -334,6 +345,7 @@ const HANDLERS: Partial<Record<AgentNodeType, NodeHandler>> = {
   'logic-and': andHandler,
   'logic-or': orHandler,
   'webcam-image': webcamImageHandler,
+  tts: ttsHandler,
 };
 
 export function useAgentGraphRunner() {
