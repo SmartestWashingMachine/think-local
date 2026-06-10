@@ -1,5 +1,6 @@
 export type AgentNodeType =
   | 'user-query'
+  | 'webcam-image'
   | 'llm'
   | 'rag'
   | 'string-joiner'
@@ -13,7 +14,7 @@ export type AgentNodeType =
 
 export type AgentNodeCategory = 'input' | 'process' | 'if' | 'output' | 'mcp';
 
-export type ValueType = 'string' | 'list<string>';
+export type ValueType = 'string' | 'list<string>' | 'image';
 
 export interface HandleConfig {
   id: string;
@@ -89,21 +90,35 @@ export const AGENT_NODE_DEFINITIONS: Record<AgentNodeType, AgentNodeDefinition> 
     properties: [],
     defaults: {},
   },
+  'webcam-image': {
+    type: 'webcam-image',
+    category: 'input',
+    label: 'Webcam Image',
+    color: '#4caf50',
+    description: 'Captures a frame from the webcam triggered by a text input',
+    handles: [
+      { id: 'trigger', label: 'Trigger', type: 'target', position: 'top', valueType: 'string' },
+      { id: 'output', label: 'Image', type: 'source', position: 'bottom', valueType: 'image' },
+    ],
+    properties: [],
+    defaults: {},
+  },
   llm: {
     type: 'llm',
     category: 'process',
     label: 'LLM',
     color: '#2196f3',
-    description: 'Calls a language model with an input string',
+    description: 'Calls a language model with an input string and optional image',
     handles: [
       { id: 'input', label: 'Input', type: 'target', position: 'top', valueType: 'string' },
+      { id: 'image', label: 'Image', type: 'target', position: 'left', valueType: 'image' },
       { id: 'output', label: 'Output', type: 'source', position: 'bottom', valueType: 'string' },
     ],
     properties: [
       { key: 'message', label: 'Message', type: 'text', placeholder: '{text}', description: 'Template for the LLM prompt. Use {text} to insert the input.' },
       { key: 'streamOutput', label: 'Stream Output', type: 'boolean', description: 'When enabled, streams the LLM output token by token into the chat as it is generated.' },
     ],
-    defaults: { message: '{text}', streamOutput: false },
+    defaults: { message: '{text}', streamOutput: false, inputOrder: [] },
   },
   rag: {
     type: 'rag',

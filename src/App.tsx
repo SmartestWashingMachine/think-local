@@ -6,6 +6,7 @@ import { useAI } from './hooks/useAI';
 import { useEmbeddings } from './hooks/useEmbeddings';
 import { useVectorStore } from './hooks/useVectorStore';
 import type { Message } from './types/chat';
+import type { ChatCompletionMessage } from '@wllama/wllama/esm/types/oai-compat';
 import { RAG_DEFAULT_TOP_K, buildRagAugmentedMessage, RAG_FIRST_MESSAGE_TEMPLATE } from './constants/rag';
 import Landing from './components/Landing';
 import Chat from './components/Chat';
@@ -63,7 +64,7 @@ export default function App() {
       await sendMessage(content, async (history: Message[], onToken, setAssistantContent) => {
         setAssistantContent('');
         return generateCompletionStream(
-          history.map((m) => ({ role: m.role, content: m.content })),
+          history.map((m) => ({ role: m.role, content: m.content } as ChatCompletionMessage)),
           onToken,
         );
       });

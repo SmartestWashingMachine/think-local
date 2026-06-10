@@ -43,11 +43,14 @@ export default function AgentNodeInspector({ node, edges, nodes, onUpdateNodeDat
   const data = node.data as unknown as AgentNodeData;
   const def = AGENT_NODE_DEFINITIONS[data.nodeType];
   const category = AGENT_NODE_CATEGORIES.find((c) => c.key === def.category);
-  const isStringJoiner = data.nodeType === 'string-joiner';
+  const hasReorderableInputs = data.nodeType === 'string-joiner' || data.nodeType === 'llm';
 
-  const incomingEdges = isStringJoiner
-    ? edges.filter((e) => e.target === node.id && e.targetHandle === 'input')
-    : [];
+  const incomingEdges = edges.filter((e) => {
+    if (e.target !== node.id) return false;
+    if (data.nodeType === 'string-joiner') return e.targetHandle === 'input';
+    if (data.nodeType === 'llm') return e.targetHandle === 'input' || e.targetHandle === 'image';
+    return false;
+  });
 
   const currentOrder = (data.inputOrder as string[]) ?? [];
   const sortedEdges = [...incomingEdges].sort((a, b) => {
@@ -116,7 +119,7 @@ export default function AgentNodeInspector({ node, edges, nodes, onUpdateNodeDat
         />
       ))}
 
-      {isStringJoiner && (
+      {hasReorderableInputs && (
         <div className="inspector__section">
           <h4 className="inspector__section-title">Connected Inputs</h4>
           <p className="inspector__text inspector__text--muted">Drag to reorder the input edges. Order determines how inputs are collated.</p>

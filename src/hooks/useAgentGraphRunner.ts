@@ -5,10 +5,10 @@ import { AGENT_NODE_DEFINITIONS } from '../types/agentGraph';
 import { generateEmbedding } from '../ai/embeddings';
 import { search as vectorSearch } from '../ai/vectorStore';
 import type { ChatCompletionTool } from '../types/mcp';
-import type { ChatCompletionMessage } from '@wllama/wllama/esm/types/oai-compat';
+import type { ChatCompletionMessage, ChatCompletionMessageContent } from '@wllama/wllama/esm/types/oai-compat';
 import type { Message } from '../types/chat';
 
-type NodeOutputValue = string | string[] | null;
+type NodeOutputValue = string | string[] | ArrayBuffer | null;
 
 interface NodeHandlerContext {
   firstStr: string;
@@ -20,7 +20,7 @@ interface NodeHandlerContext {
   edges: Edge[];
   messages: Message[];
   generateCompletionStream: (
-    messages: { role: 'user' | 'assistant' | 'system'; content: string }[],
+    messages: ChatCompletionMessage[],
     onToken: (token: string) => void,
   ) => Promise<string>;
   onToken: (token: string) => void;
@@ -86,14 +86,53 @@ function preview(val: string, max = 200): string {
   return val.length > max ? val.slice(0, max) + '...' : val;
 }
 
-const llmHandler: NodeHandler = async ({ firstStr, nodeData, messages: conversationHistory, generateCompletionStream, onToken, setAssistantContent, mcpTools, mcpSystemMessage, executeTool, generateCompletionWithTools, onToolTrace }) => {
+function buildMultimodalUserContent(
+  prompt: string,
+  incomingEdges: Edge[],
+  inputOrder: string[],
+  outputs: Map<string, NodeOutputValue>,
+  handleOutputs: Map<string, Map<string, NodeOutputValue>>,
+): string | ChatCompletionMessageContent[] {
+  const imageEdges = incomingEdges.filter((e) => e.targetHandle === 'image');
+  let imageData: ArrayBuffer | null = null;
+  for (const edge of imageEdges) {
+    const output = getSourceOutput(edge.source, edge.sourceHandle, outputs, handleOutputs);
+    if (output instanceof ArrayBuffer) {
+      imageData = output;
+      break;
+    }
+  }
+
+  if (!imageData) return prompt;
+
+  const sortedEdges = [...incomingEdges].sort((a, b) => {
+    const aIdx = inputOrder.indexOf(a.id);
+    const bIdx = inputOrder.indexOf(b.id);
+    return (aIdx === -1 ? Infinity : aIdx) - (bIdx === -1 ? Infinity : bIdx);
+  });
+
+  const contentParts: ChatCompletionMessageContent[] = [];
+  for (const edge of sortedEdges) {
+    if (edge.targetHandle === 'input') {
+      contentParts.push({ type: 'text', text: prompt });
+    } else if (edge.targetHandle === 'image' && imageData) {
+      contentParts.push({ type: 'image', data: imageData });
+    }
+  }
+  return contentParts;
+}
+
+const llmHandler: NodeHandler = async ({ firstStr, incomingEdges, nodeData, outputs, handleOutputs, messages: conversationHistory, generateCompletionStream, onToken, setAssistantContent, mcpTools, mcpSystemMessage, executeTool, generateCompletionWithTools, onToolTrace }) => {
   const messageTemplate = (nodeData.message as string) ?? '{text}';
   const prompt = messageTemplate.replace('{text}', firstStr);
   const streamOutput = (nodeData.streamOutput as boolean) ?? false;
+  const inputOrder = (nodeData.inputOrder as string[]) ?? [];
 
-  const historyMessages = conversationHistory
+  const userContent = buildMultimodalUserContent(prompt, incomingEdges, inputOrder, outputs, handleOutputs);
+
+  const historyMessages: ChatCompletionMessage[] = conversationHistory
     .filter((m) => m.role === 'user' || m.role === 'assistant')
-    .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+    .map((m) => ({ role: m.role, content: m.content }));
 
   if (mcpTools && mcpTools.length > 0 && generateCompletionWithTools && executeTool) {
     setAssistantContent?.('');
@@ -102,7 +141,7 @@ const llmHandler: NodeHandler = async ({ firstStr, nodeData, messages: conversat
       messages.push({ role: 'system', content: mcpSystemMessage });
     }
     messages.push(...historyMessages);
-    messages.push({ role: 'user', content: prompt });
+    messages.push({ role: 'user', content: userContent });
     return await generateCompletionWithTools(
       messages,
       onToken,
@@ -112,12 +151,12 @@ const llmHandler: NodeHandler = async ({ firstStr, nodeData, messages: conversat
     );
   }
 
-  const llmMessages: { role: 'user' | 'assistant' | 'system'; content: string }[] = [];
+  const llmMessages: ChatCompletionMessage[] = [];
   if (mcpSystemMessage) {
     llmMessages.push({ role: 'system', content: mcpSystemMessage });
   }
   llmMessages.push(...historyMessages);
-  llmMessages.push({ role: 'user', content: prompt });
+  llmMessages.push({ role: 'user', content: userContent });
 
   if (streamOutput) {
     setAssistantContent?.('');
@@ -211,6 +250,32 @@ const chatMessageHandler: NodeHandler = async ({ firstStr, setAssistantContent }
   return firstStr;
 };
 
+const webcamImageHandler: NodeHandler = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+    const video = document.createElement('video');
+    video.srcObject = stream;
+    await video.play();
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d')!;
+    ctx.drawImage(video, 0, 0);
+
+    stream.getTracks().forEach((track) => track.stop());
+
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('toBlob failed'))), 'image/png');
+    });
+
+    return await blob.arrayBuffer();
+  } catch (err) {
+    console.warn('[AgentGraph] Webcam capture failed:', err);
+    return null;
+  }
+};
+
 const andHandler: NodeHandler = async ({ incomingEdges, outputs, handleOutputs }) => {
   const conditionEdges = incomingEdges.filter((e) => e.targetHandle === 'conditions');
   const valueEdge = incomingEdges.find((e) => e.targetHandle === 'value');
@@ -257,6 +322,7 @@ const HANDLERS: Partial<Record<AgentNodeType, NodeHandler>> = {
   'chat-message': chatMessageHandler,
   'logic-and': andHandler,
   'logic-or': orHandler,
+  'webcam-image': webcamImageHandler,
 };
 
 export function useAgentGraphRunner() {
@@ -266,7 +332,7 @@ export function useAgentGraphRunner() {
     userInput: string,
     messages: Message[],
     generateCompletionStream: (
-      messages: { role: 'user' | 'assistant' | 'system'; content: string }[],
+      messages: ChatCompletionMessage[],
       onToken: (token: string) => void,
     ) => Promise<string>,
     onToken: (token: string) => void,
@@ -340,7 +406,11 @@ export function useAgentGraphRunner() {
       if (nodeType !== 'chat-message') {
         if (nodeType === 'string-joiner') {
           const inputSummary = successfulOutputs
-            .map((v) => (typeof v === 'string' ? `"${preview(v)}"` : v.map((item) => preview(item)).join('\n---\n')))
+            .map((v) => {
+              if (typeof v === 'string') return `"${preview(v)}"`;
+              if (v instanceof ArrayBuffer) return `(image: ${v.byteLength} bytes)`;
+              return v.map((item) => preview(item)).join('\n---\n');
+            })
             .join(', ');
           addTrace(node, 'input', inputSummary);
         } else {
@@ -418,6 +488,8 @@ export function useAgentGraphRunner() {
         addTrace(node, 'output', '(canceled)');
       } else if (typeof result === 'string') {
         addTrace(node, 'output', preview(result));
+      } else if (result instanceof ArrayBuffer) {
+        addTrace(node, 'output', `(image: ${result.byteLength} bytes)`);
       } else {
         addTrace(node, 'output', result.map((item) => preview(item)).join('\n---\n'));
       }

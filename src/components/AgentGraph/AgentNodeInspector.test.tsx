@@ -257,15 +257,15 @@ describe('AgentNodeInspector', () => {
       expect(screen.getByText('No connected inputs')).toBeInTheDocument();
     });
 
-    it('does not show Connected Inputs section for non-string-joiner nodes', () => {
+    it('does not show Connected Inputs section for non-reorderable nodes', () => {
       const node: Node = {
         id: 'test-node-5',
         type: 'process',
         position: { x: 0, y: 0 },
         selected: true,
         data: {
-          nodeType: 'llm',
-          label: 'LLM',
+          nodeType: 'rag',
+          label: 'RAG',
         } as unknown as AgentNodeData,
       } as unknown as Node;
 

@@ -27,7 +27,7 @@ interface ChatProps {
   ) => Promise<void>;
   clearMessages: () => void;
   generateCompletionStream: (
-    messages: { role: 'user' | 'assistant' | 'system'; content: string }[],
+    messages: ChatCompletionMessage[],
     onToken: (token: string) => void,
   ) => Promise<string>;
   generateCompletionWithTools?: (

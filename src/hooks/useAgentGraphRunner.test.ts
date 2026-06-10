@@ -19,7 +19,7 @@ vi.mock('../ai/vectorStore', () => ({
 function createMockNodes(types: string[]): Node[] {
   return types.map((type, i) => ({
     id: `node-${i}`,
-    type: type === 'user-query' ? 'input' :
+    type: type === 'user-query' || type === 'webcam-image' ? 'input' :
       type === 'if-string-contains' || type === 'if-closest-document' || type === 'logic-and' || type === 'logic-or' ? 'if' :
       type === 'chat-message' ? 'output' : 'process',
     position: { x: i * 250, y: 200 },
@@ -478,6 +478,120 @@ describe('useAgentGraphRunner', () => {
 
       expect(generateCompletionStream).toHaveBeenCalledTimes(1);
       expect(output).toBe('');
+    });
+  });
+
+  describe('webcam-image node', () => {
+    beforeEach(() => {
+      Object.defineProperty(navigator, 'mediaDevices', {
+        value: { getUserMedia: vi.fn() },
+        configurable: true,
+        writable: true,
+      });
+
+      HTMLVideoElement.prototype.play = vi.fn().mockResolvedValue(undefined);
+
+      HTMLCanvasElement.prototype.getContext = vi.fn().mockReturnValue({
+        drawImage: vi.fn(),
+      });
+
+      HTMLCanvasElement.prototype.toBlob = vi.fn(
+        (callback: BlobCallback) => {
+          callback(new Blob(['fake-image-data'], { type: 'image/png' }));
+        },
+      );
+    });
+
+    it('falls back to text-only when webcam capture fails', async () => {
+      navigator.mediaDevices.getUserMedia = vi
+        .fn()
+        .mockRejectedValue(new Error('Permission denied'));
+
+      const nodes = createMockNodes(['user-query', 'webcam-image', 'llm', 'chat-message']);
+      const edges: Edge[] = [
+        { id: 'e-uq-wc', source: 'node-0', target: 'node-1', sourceHandle: 'output', targetHandle: 'trigger' },
+        { id: 'e-uq-llm', source: 'node-0', target: 'node-2', sourceHandle: 'output', targetHandle: 'input' },
+        { id: 'e-wc-llm', source: 'node-1', target: 'node-2', sourceHandle: 'output', targetHandle: 'image' },
+        { id: 'e-llm-cm', source: 'node-2', target: 'node-3', sourceHandle: 'output', targetHandle: 'input' },
+      ] as Edge[];
+      const { result } = renderHook(() => useAgentGraphRunner());
+
+      const output = await result.current.executeGraph(nodes, edges, 'describe this', [], generateCompletionStream, onToken, setAssistantContent, onTrace);
+
+      expect(generateCompletionStream).toHaveBeenCalledTimes(1);
+      expect(generateCompletionStream).toHaveBeenCalledWith(
+        [{ role: 'user', content: 'describe this' }],
+        expect.any(Function),
+      );
+      expect(output).toBe('LLM response');
+    });
+
+    it('builds multimodal content when image is captured successfully', async () => {
+      const mockStream = { getTracks: () => [{ stop: vi.fn() }] };
+      navigator.mediaDevices.getUserMedia = vi.fn().mockResolvedValue(mockStream);
+
+      const nodes = createMockNodes(['user-query', 'webcam-image', 'llm', 'chat-message']);
+      const edges: Edge[] = [
+        { id: 'e-uq-wc', source: 'node-0', target: 'node-1', sourceHandle: 'output', targetHandle: 'trigger' },
+        { id: 'e-uq-llm', source: 'node-0', target: 'node-2', sourceHandle: 'output', targetHandle: 'input' },
+        { id: 'e-wc-llm', source: 'node-1', target: 'node-2', sourceHandle: 'output', targetHandle: 'image' },
+        { id: 'e-llm-cm', source: 'node-2', target: 'node-3', sourceHandle: 'output', targetHandle: 'input' },
+      ] as Edge[];
+      const { result } = renderHook(() => useAgentGraphRunner());
+
+      await result.current.executeGraph(nodes, edges, 'describe this', [], generateCompletionStream, onToken, setAssistantContent, onTrace);
+
+      expect(generateCompletionStream).toHaveBeenCalledTimes(1);
+      const msgs = generateCompletionStream.mock.calls[0][0];
+      const userMsg = msgs.find((m: { role: string }) => m.role === 'user');
+      expect(Array.isArray(userMsg.content)).toBe(true);
+      expect(userMsg.content[0].type).toBe('text');
+      expect(userMsg.content[0].text).toBe('describe this');
+      expect(userMsg.content[1].type).toBe('image');
+      expect(userMsg.content[1].data).toBeInstanceOf(ArrayBuffer);
+    });
+
+    it('respects inputOrder for text/image ordering in multimodal content', async () => {
+      const mockStream = { getTracks: () => [{ stop: vi.fn() }] };
+      navigator.mediaDevices.getUserMedia = vi.fn().mockResolvedValue(mockStream);
+
+      const nodes = createMockNodes(['user-query', 'webcam-image', 'llm', 'chat-message']);
+      // Reverse order: image edge first, text edge second
+      nodes[2].data = { ...nodes[2].data, inputOrder: ['e-wc-llm', 'e-uq-llm'] };
+      const edges: Edge[] = [
+        { id: 'e-uq-wc', source: 'node-0', target: 'node-1', sourceHandle: 'output', targetHandle: 'trigger' },
+        { id: 'e-uq-llm', source: 'node-0', target: 'node-2', sourceHandle: 'output', targetHandle: 'input' },
+        { id: 'e-wc-llm', source: 'node-1', target: 'node-2', sourceHandle: 'output', targetHandle: 'image' },
+        { id: 'e-llm-cm', source: 'node-2', target: 'node-3', sourceHandle: 'output', targetHandle: 'input' },
+      ] as Edge[];
+      const { result } = renderHook(() => useAgentGraphRunner());
+
+      await result.current.executeGraph(nodes, edges, 'describe this', [], generateCompletionStream, onToken, setAssistantContent, onTrace);
+
+      expect(generateCompletionStream).toHaveBeenCalledTimes(1);
+      const msgs = generateCompletionStream.mock.calls[0][0];
+      const userMsg = msgs.find((m: { role: string }) => m.role === 'user');
+      expect(Array.isArray(userMsg.content)).toBe(true);
+      // Image should come first, text second
+      expect(userMsg.content[0].type).toBe('image');
+      expect(userMsg.content[0].data).toBeInstanceOf(ArrayBuffer);
+      expect(userMsg.content[1].type).toBe('text');
+      expect(userMsg.content[1].text).toBe('describe this');
+    });
+
+    it('still works with text-only LLM (no image edge)', async () => {
+      const nodes = createMockNodes(['user-query', 'llm', 'chat-message']);
+      const edges = createEdges(nodes.map((n) => n.id));
+      const { result } = renderHook(() => useAgentGraphRunner());
+
+      const output = await result.current.executeGraph(nodes, edges, 'hello', [], generateCompletionStream, onToken, setAssistantContent, onTrace);
+
+      expect(generateCompletionStream).toHaveBeenCalledTimes(1);
+      expect(generateCompletionStream).toHaveBeenCalledWith(
+        [{ role: 'user', content: 'hello' }],
+        expect.any(Function),
+      );
+      expect(output).toBe('LLM response');
     });
   });
 });

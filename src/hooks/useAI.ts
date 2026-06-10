@@ -127,7 +127,7 @@ export function useAI() {
 
   const generateCompletionStream = useCallback(
     async (
-      messages: { role: "user" | "assistant" | "system"; content: string }[],
+      messages: ChatCompletionMessage[],
       onToken: (token: string) => void
     ): Promise<string> => {
       const wllama = wllamaRef.current;

@@ -13,6 +13,7 @@ const positionMap: Record<string, Position> = {
 const handleClass: Record<string, string> = {
   string: 'handle--string',
   'list<string>': 'handle--list-string',
+  image: 'handle--image',
 };
 
 export default function InputNode({ data, selected }: NodeProps) {
