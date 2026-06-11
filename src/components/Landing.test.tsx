@@ -6,7 +6,7 @@ import Landing from './Landing';
 describe('Landing', () => {
   it('renders the title and subtitle', () => {
     render(<Landing onStart={() => {}} />);
-    expect(screen.getByText('Secret Chatter')).toBeInTheDocument();
+    expect(screen.getByText('Think Local')).toBeInTheDocument();
     expect(
       screen.getByText(/A private sanctuary for conversation/),
     ).toBeInTheDocument();

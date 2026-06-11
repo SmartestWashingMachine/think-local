@@ -50,7 +50,7 @@ describe('Chat', () => {
 
   it('renders sidebar and agent chat area', () => {
     render(<Chat {...defaultProps} />);
-    expect(screen.getByText('Secret Chatter')).toBeInTheDocument();
+    expect(screen.getByText('Think Local')).toBeInTheDocument();
     expect(screen.getByTestId('agent-chat')).toBeInTheDocument();
   });
 

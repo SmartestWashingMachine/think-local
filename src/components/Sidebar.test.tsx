@@ -28,7 +28,7 @@ describe('Sidebar', () => {
 
   it('renders the app title', () => {
     render(<Sidebar {...defaultProps} />);
-    expect(screen.getByText('Secret Chatter')).toBeInTheDocument();
+    expect(screen.getByText('Think Local')).toBeInTheDocument();
   });
 
   it('renders a "New Chat" button', () => {

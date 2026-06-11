@@ -77,7 +77,7 @@ export default function Sidebar({
   return (
     <aside className="sidebar">
       <div className="sidebar__header">
-        <h2 className="sidebar__title">Secret Chatter</h2>
+        <h2 className="sidebar__title">Think Local</h2>
       </div>
 
       <div className="sidebar__pages">
