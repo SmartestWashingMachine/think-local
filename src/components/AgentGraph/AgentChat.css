@@ -10,6 +10,7 @@
 .agent-chat--expanded {
   flex: 1;
   max-height: none;
+  min-height: 0;
   border-top: none;
   background: var(--bg, #12121e);
 }
