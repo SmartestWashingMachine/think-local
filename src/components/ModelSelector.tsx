@@ -129,42 +129,44 @@ export default function ModelSelector({
           <label className="model-selector__custom-label" htmlFor="model-custom-input">
             Custom model (HuggingFace repo/file)
           </label>
-          <div className="model-selector__custom-row">
-            <input
-              id="model-custom-input"
-              className="model-selector__custom-input"
-              type="text"
-              placeholder="e.g. org/model-file.gguf"
-              value={customInput}
-              onChange={(e) => setCustomInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              disabled={isDownloading || isLoading}
-            />
-            <button
-              className="model-selector__custom-btn"
-              onClick={handleCustomSubmit}
-              disabled={isDownloading || isLoading || !customInput.trim()}
-              type="button"
-            >
-              Load
-            </button>
-          </div>
+          <input
+            id="model-custom-input"
+            className="model-selector__custom-input"
+            type="text"
+            placeholder="e.g. org/model-file.gguf"
+            value={customInput}
+            onChange={(e) => setCustomInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={isDownloading || isLoading}
+          />
 
-          <label className="model-selector__custom-label model-selector__custom-label--sub" htmlFor="model-mmproj-input">
-            Multimodal projection file (optional)
-          </label>
-          <div className="model-selector__custom-row">
+          <div className="model-selector__mmproj-section">
+            <label className="model-selector__custom-label" htmlFor="model-mmproj-input">
+              Multimodal projection file (optional)
+            </label>
+            <p className="model-selector__mmproj-help">
+              Filename of the .gguf multimodal projection file from the same HuggingFace repo. Only needed for vision models.
+            </p>
             <input
               id="model-mmproj-input"
               className="model-selector__custom-input"
               type="text"
-              placeholder="e.g. mmproj-file.gguf"
+              placeholder="e.g. mmproj-LFM2.5-VL-450m-Q8_0.gguf"
               value={mmprojCustomInput}
               onChange={(e) => setMmprojCustomInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleCustomSubmit(); }}
               disabled={isDownloading || isLoading}
             />
           </div>
+
+          <button
+            className="model-selector__custom-btn"
+            onClick={handleCustomSubmit}
+            disabled={isDownloading || isLoading || !customInput.trim()}
+            type="button"
+          >
+            Load
+          </button>
 
           <div className="model-selector__recommended-header">
             Recommended models
