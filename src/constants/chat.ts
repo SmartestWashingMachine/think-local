@@ -8,4 +8,5 @@ export const STORAGE_KEYS = {
   model: 'secret-chatter-active-model',
   agentGraphNodes: 'secret-chatter-agent-graph-nodes',
   agentGraphEdges: 'secret-chatter-agent-graph-edges',
+  activePreset: 'secret-chatter-agent-graph-preset',
 } as const;

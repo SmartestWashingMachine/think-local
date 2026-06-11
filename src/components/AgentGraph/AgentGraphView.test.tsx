@@ -4,6 +4,7 @@ import type { Node, Edge } from '@xyflow/react';
 import AgentGraphView from './AgentGraphView';
 
 const mockSetNodes = vi.fn();
+const mockSetEdges = vi.fn();
 let capturedOnUpdateNodeData: ((nodeId: string, newData: Record<string, unknown>) => void) | null = null;
 
 const localStorageMock = (() => {
@@ -19,7 +20,7 @@ Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock });
 
 vi.mock('@xyflow/react', () => ({
   useNodesState: () => [[], mockSetNodes, vi.fn()],
-  useEdgesState: () => [[], vi.fn(), vi.fn()],
+  useEdgesState: () => [[], mockSetEdges, vi.fn()],
   addEdge: vi.fn((e: Edge, eds: Edge[]) => [...eds, e]),
   ReactFlow: () => null,
   Background: () => null,
@@ -49,6 +50,23 @@ vi.mock('./RightPane', () => ({
 vi.mock('./AgentChat', () => ({
   default: function MockAgentChat() {
     return <div data-testid="agent-chat">Agent Chat</div>;
+  },
+}));
+
+vi.mock('./PresetBar', () => ({
+  default: function MockPresetBar({ activePresetId, onSelectPreset }: { activePresetId: string; onSelectPreset: (id: string) => void }) {
+    return (
+      <div data-testid="preset-bar">
+        <select
+          data-testid="preset-select"
+          value={activePresetId}
+          onChange={(e) => onSelectPreset(e.target.value)}
+        >
+          <option value="chat">Chat</option>
+          <option value="guardrail">Guardrail</option>
+        </select>
+      </div>
+    );
   },
 }));
 
@@ -193,6 +211,64 @@ describe('AgentGraphView', () => {
     expect(localStorageMock.setItem).toHaveBeenCalledWith(
       'secret-chatter-agent-graph-nodes',
       '[]',
+    );
+  });
+
+  it('renders the preset bar', () => {
+    render(
+      <AgentGraphView
+        onBack={onBack}
+        onClearChat={vi.fn()}
+        generateCompletionStream={generateCompletionStream}
+        messages={messages}
+        sendMessage={sendMessage}
+        updateUserMessageImage={updateUserMessageImage}
+        modelStatus="loaded"
+      />,
+    );
+    expect(screen.getByTestId('preset-bar')).toBeInTheDocument();
+    expect(screen.getByTestId('preset-select')).toBeInTheDocument();
+    expect(screen.getByTestId('preset-select')).toHaveValue('chat');
+  });
+
+  it('switching preset calls setNodes with new nodes', () => {
+    render(
+      <AgentGraphView
+        onBack={onBack}
+        onClearChat={vi.fn()}
+        generateCompletionStream={generateCompletionStream}
+        messages={messages}
+        sendMessage={sendMessage}
+        updateUserMessageImage={updateUserMessageImage}
+        modelStatus="loaded"
+      />,
+    );
+    vi.clearAllMocks();
+    const select = screen.getByTestId('preset-select');
+    select.value = 'guardrail';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(mockSetNodes).toHaveBeenCalledOnce();
+  });
+
+  it('switching preset saves the preset id to localStorage', () => {
+    render(
+      <AgentGraphView
+        onBack={onBack}
+        onClearChat={vi.fn()}
+        generateCompletionStream={generateCompletionStream}
+        messages={messages}
+        sendMessage={sendMessage}
+        updateUserMessageImage={updateUserMessageImage}
+        modelStatus="loaded"
+      />,
+    );
+    vi.clearAllMocks();
+    const select = screen.getByTestId('preset-select');
+    select.value = 'guardrail';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(localStorageMock.setItem).toHaveBeenCalledWith(
+      'secret-chatter-agent-graph-preset',
+      'guardrail',
     );
   });
 });

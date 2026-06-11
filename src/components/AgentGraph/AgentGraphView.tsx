@@ -12,10 +12,12 @@ import type { AgentNodeType, AgentNodeData, TraceEntry } from '../../types/agent
 import { AGENT_NODE_DEFINITIONS } from '../../types/agentGraph';
 import type { Message } from '../../types/chat';
 import { STORAGE_KEYS } from '../../constants/chat';
+import { PRESETS, getPreset, DEFAULT_PRESET_ID } from '../../constants/presets';
 import type { ChatCompletionTool, ChatCompletionMessage } from '@wllama/wllama/esm/types/oai-compat';
 import GraphCanvas from './GraphCanvas';
 import RightPane from './RightPane';
 import AgentChat from './AgentChat';
+import PresetBar from './PresetBar';
 import './AgentGraphView.css';
 
 function createNode(type: AgentNodeType, position: { x: number; y: number }, id?: string): Node {
@@ -28,52 +30,52 @@ function createNode(type: AgentNodeType, position: { x: number; y: number }, id?
   } as unknown as Node;
 }
 
-const USER_QUERY_NODE = createNode('user-query', { x: 100, y: 200 });
-const USER_IMAGE_NODE = createNode('user-image', { x: 100, y: 360 });
-const USER_AUDIO_NODE = createNode('user-audio', { x: 100, y: 520 });
-const LLM_NODE = createNode('llm', { x: 350, y: 200 });
-const CHAT_MESSAGE_NODE = createNode('chat-message', { x: 600, y: 200 });
+function loadActivePresetId(): string {
+  try {
+    return localStorage.getItem(STORAGE_KEYS.activePreset) ?? DEFAULT_PRESET_ID;
+  } catch {
+    return DEFAULT_PRESET_ID;
+  }
+}
 
-const USER_QUERY_NODE_ID = USER_QUERY_NODE.id;
-const USER_IMAGE_NODE_ID = USER_IMAGE_NODE.id;
-const USER_AUDIO_NODE_ID = USER_AUDIO_NODE.id;
-const CHAT_MESSAGE_NODE_ID = CHAT_MESSAGE_NODE.id;
+function saveActivePresetId(id: string) {
+  try {
+    localStorage.setItem(STORAGE_KEYS.activePreset, id);
+  } catch {
+    // ignore
+  }
+}
 
-const INITIAL_NODES = [USER_QUERY_NODE, USER_IMAGE_NODE, USER_AUDIO_NODE, LLM_NODE, CHAT_MESSAGE_NODE];
-const INITIAL_EDGES: Edge[] = [
-  {
-    id: crypto.randomUUID(),
-    source: USER_QUERY_NODE_ID,
-    target: LLM_NODE.id,
-    sourceHandle: 'output',
-    targetHandle: 'input',
-    style: { stroke: '#666', strokeWidth: 2 },
-  } as Edge,
-  {
-    id: crypto.randomUUID(),
-    source: USER_IMAGE_NODE_ID,
-    target: LLM_NODE.id,
-    sourceHandle: 'output',
-    targetHandle: 'image',
-    style: { stroke: '#666', strokeWidth: 2 },
-  } as Edge,
-  {
-    id: crypto.randomUUID(),
-    source: USER_AUDIO_NODE_ID,
-    target: LLM_NODE.id,
-    sourceHandle: 'output',
-    targetHandle: 'audio',
-    style: { stroke: '#666', strokeWidth: 2 },
-  } as Edge,
-  {
-    id: crypto.randomUUID(),
-    source: LLM_NODE.id,
-    target: CHAT_MESSAGE_NODE_ID,
-    sourceHandle: 'output',
-    targetHandle: 'input',
-    style: { stroke: '#666', strokeWidth: 2 },
-  } as Edge,
-];
+function loadInitialGraph(presetId: string): { nodes: Node[]; edges: Edge[] } {
+  const savedNodes = loadGraphNodesRaw();
+  const savedEdges = loadGraphEdgesRaw();
+  if (savedNodes && savedEdges) {
+    return { nodes: savedNodes, edges: savedEdges };
+  }
+  const preset = getPreset(presetId);
+  if (preset) {
+    return preset.create();
+  }
+  return getPreset(DEFAULT_PRESET_ID)!.create();
+}
+
+function loadGraphNodesRaw(): Node[] | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.agentGraphNodes);
+    return raw ? (JSON.parse(raw) as Node[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+function loadGraphEdgesRaw(): Edge[] | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.agentGraphEdges);
+    return raw ? (JSON.parse(raw) as Edge[]) : null;
+  } catch {
+    return null;
+  }
+}
 
 type RightPaneTab = 'info' | 'add' | 'trace';
 
@@ -103,23 +105,7 @@ interface AgentGraphViewProps {
   onOpenModelSelector: () => void;
 }
 
-function loadGraphNodes(): Node[] | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.agentGraphNodes);
-    return raw ? (JSON.parse(raw) as Node[]) : null;
-  } catch {
-    return null;
-  }
-}
-
-function loadGraphEdges(): Edge[] | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS.agentGraphEdges);
-    return raw ? (JSON.parse(raw) as Edge[]) : null;
-  } catch {
-    return null;
-  }
-}
+const PROTECTED_NODE_TYPES = new Set<AgentNodeType>(['user-query', 'user-image', 'user-audio', 'chat-message']);
 
 function saveGraphNodes(nodes: Node[]) {
   localStorage.setItem(STORAGE_KEYS.agentGraphNodes, JSON.stringify(nodes));
@@ -130,8 +116,11 @@ function saveGraphEdges(edges: Edge[]) {
 }
 
 export default function AgentGraphView({ onClearChat, generateCompletionStream, generateCompletionWithTools, messages, sendMessage, updateUserMessageImage, modelStatus, onOpenModelSelector }: AgentGraphViewProps) {
-  const [nodes, setNodes, onNodesChange] = useNodesState(loadGraphNodes() ?? INITIAL_NODES);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(loadGraphEdges() ?? INITIAL_EDGES);
+  const initialPresetId = loadActivePresetId();
+  const initialGraph = loadInitialGraph(initialPresetId);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialGraph.nodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialGraph.edges);
+  const [activePresetId, setActivePresetId] = useState(initialPresetId);
 
   useEffect(() => {
     saveGraphNodes(nodes);
@@ -140,6 +129,20 @@ export default function AgentGraphView({ onClearChat, generateCompletionStream, 
   useEffect(() => {
     saveGraphEdges(edges);
   }, [edges]);
+
+  const handleSelectPreset = useCallback(
+    (presetId: string) => {
+      const preset = getPreset(presetId);
+      if (!preset) return;
+      const { nodes: newNodes, edges: newEdges } = preset.create();
+      setNodes(newNodes);
+      setEdges(newEdges);
+      setActivePresetId(presetId);
+      saveActivePresetId(presetId);
+    },
+    [setNodes, setEdges],
+  );
+
   const [rightPaneTab, setRightPaneTab] = useState<RightPaneTab>('info');
   const [traceEntries, setTraceEntries] = useState<TraceEntry[]>([]);
   const traceRef = useRef<TraceEntry[]>([]);
@@ -158,14 +161,18 @@ export default function AgentGraphView({ onClearChat, generateCompletionStream, 
   const handleNodesChange = useCallback(
     (changes: NodeChange[]) => {
       const filtered = changes.filter((change) => {
-        if (change.type === 'remove' && (change.id === USER_QUERY_NODE_ID || change.id === USER_IMAGE_NODE_ID || change.id === USER_AUDIO_NODE_ID || change.id === CHAT_MESSAGE_NODE_ID)) {
-          return false;
+        if (change.type === 'remove') {
+          const node = nodes.find((n) => n.id === change.id);
+          const nodeData = node?.data as unknown as AgentNodeData | undefined;
+          if (nodeData && PROTECTED_NODE_TYPES.has(nodeData.nodeType)) {
+            return false;
+          }
         }
         return true;
       });
       onNodesChange(filtered);
     },
-    [onNodesChange],
+    [onNodesChange, nodes],
   );
 
   const onConnect = useCallback(
@@ -241,15 +248,22 @@ export default function AgentGraphView({ onClearChat, generateCompletionStream, 
     <div className="agent-graph-view">
       <div className="agent-graph-view__body">
         <div className="agent-graph-view__canvas-section">
-          <GraphCanvas
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={handleNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onSelectionChange={onSelectionChange}
-            onAddNode={onAddNodeAtPosition}
-          />
+          <div className="agent-graph-view__canvas-column">
+            <PresetBar
+              presets={PRESETS}
+              activePresetId={activePresetId}
+              onSelectPreset={handleSelectPreset}
+            />
+            <GraphCanvas
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={handleNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              onSelectionChange={onSelectionChange}
+              onAddNode={onAddNodeAtPosition}
+            />
+          </div>
           <RightPane
             selectedNode={selectedNode}
             edges={edges}

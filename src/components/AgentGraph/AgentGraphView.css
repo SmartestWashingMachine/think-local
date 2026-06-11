@@ -21,6 +21,14 @@
   min-height: 200px;
 }
 
+.agent-graph-view__canvas-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
 .agent-graph-view__chat {
   flex-shrink: 0;
   display: flex;
