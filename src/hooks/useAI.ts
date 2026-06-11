@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Wllama } from "@wllama/wllama/esm/index.js";
 import type { ModelInfo, ModelStatus } from "../ai/types";
 import { saveModelId, formatModelId } from "../ai/models";
-import { WLLAMA_CONFIG_PATHS, buildHFDownloadUrl } from "../ai/config";
+import { WLLAMA_CONFIG_PATHS, buildHFDownloadUrl, buildHFMmprojUrl } from "../ai/config";
 import type { ChatCompletionTool } from "../types/mcp";
 import type {
   ChatCompletionMessage,
@@ -91,16 +91,33 @@ export function useAI() {
       await getOrCreateWllama();
 
       try {
-        await wllamaRef.current!.loadModelFromUrl(url, {
-          useCache: true,
-          progressCallback: (progress) => {
-            if (progress.total > 0) {
-              setDownloadProgress(
-                Math.round((progress.loaded / progress.total) * 100)
-              );
+        if (info.mmprojFile) {
+          const mmprojUrl = buildHFMmprojUrl(info);
+          await wllamaRef.current!.loadModelFromUrl(
+            { url, mmprojUrl },
+            {
+              useCache: true,
+              progressCallback: (progress) => {
+                if (progress.total > 0) {
+                  setDownloadProgress(
+                    Math.round((progress.loaded / progress.total) * 100)
+                  );
+                }
+              },
             }
-          },
-        });
+          );
+        } else {
+          await wllamaRef.current!.loadModelFromUrl(url, {
+            useCache: true,
+            progressCallback: (progress) => {
+              if (progress.total > 0) {
+                setDownloadProgress(
+                  Math.round((progress.loaded / progress.total) * 100)
+                );
+              }
+            },
+          });
+        }
 
         setLoadedModelInfo(info);
         setStatus("loaded");

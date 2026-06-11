@@ -271,3 +271,24 @@
   white-space: nowrap;
   flex-shrink: 0;
 }
+
+.model-selector__custom-label--sub {
+  font-size: 0.78rem;
+  opacity: 0.75;
+  margin-top: -0.5rem;
+}
+
+.model-selector__vision-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-radius: 0.25rem;
+  background: rgba(139, 92, 246, 0.15);
+  color: #8b5cf6;
+  vertical-align: middle;
+  line-height: 1.4;
+}

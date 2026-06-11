@@ -4,6 +4,10 @@ export interface ModelInfo {
   repo: string;
   file: string;
   label: string;
+  /** Optional multimodal projection file (mmproj) for vision/audio support */
+  mmprojFile?: string;
+  /** Optional separate repo for mmproj; defaults to `repo` when omitted */
+  mmprojRepo?: string;
 }
 
 export interface LoadProgress {

@@ -31,6 +31,7 @@ export default function ModelSelector({
   webGpuSupported,
 }: ModelSelectorProps) {
   const [customInput, setCustomInput] = useState('');
+  const [mmprojCustomInput, setMmprojCustomInput] = useState('');
 
   if (!open) return null;
 
@@ -39,12 +40,15 @@ export default function ModelSelector({
     if (!trimmed) return;
     const parsed = parseModelId(trimmed);
     if (!parsed) return;
+    const mmprojTrimmed = mmprojCustomInput.trim();
     onSelectModel({
       repo: parsed.repo,
       file: parsed.file,
       label: trimmed,
+      ...(mmprojTrimmed ? { mmprojFile: mmprojTrimmed } : {}),
     });
     setCustomInput('');
+    setMmprojCustomInput('');
   }
 
   function handleRecommendedClick(model: ModelInfo) {
@@ -146,6 +150,22 @@ export default function ModelSelector({
             </button>
           </div>
 
+          <label className="model-selector__custom-label model-selector__custom-label--sub" htmlFor="model-mmproj-input">
+            Multimodal projection file (optional)
+          </label>
+          <div className="model-selector__custom-row">
+            <input
+              id="model-mmproj-input"
+              className="model-selector__custom-input"
+              type="text"
+              placeholder="e.g. mmproj-file.gguf"
+              value={mmprojCustomInput}
+              onChange={(e) => setMmprojCustomInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleCustomSubmit(); }}
+              disabled={isDownloading || isLoading}
+            />
+          </div>
+
           <div className="model-selector__recommended-header">
             Recommended models
           </div>
@@ -160,7 +180,10 @@ export default function ModelSelector({
                 type="button"
               >
                 <div className="model-selector__recommended-item-info">
-                  <span className="model-selector__recommended-item-label">{model.label}</span>
+                  <span className="model-selector__recommended-item-label">
+                    {model.label}
+                    {model.mmprojFile && <span className="model-selector__vision-badge">Vision</span>}
+                  </span>
                   <span className="model-selector__recommended-item-path">{model.repo}/{model.file}</span>
                 </div>
                 {isCached(model) && (

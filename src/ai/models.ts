@@ -2,6 +2,12 @@ import type { ModelInfo, ModelId } from './types';
 
 export const RECOMMENDED_MODELS: ModelInfo[] = [
   {
+    repo: 'LiquidAI/LFM2.5-VL-450M-GGUF',
+    file: 'LFM2.5-VL-450M-Q4_0.gguf',
+    label: 'LFM2.5-VL-450M (Q4_0, vision)',
+    mmprojFile: 'mmproj-LFM2.5-VL-450m-Q8_0.gguf',
+  },
+  {
     repo: 'ggml-org/models',
     file: 'tinyllamas/stories260K.gguf',
     label: 'TinyLlama 260K (demo)',
