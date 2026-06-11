@@ -4,6 +4,7 @@ export interface Message {
   content: string;
   createdAt: number;
   imageData?: string;
+  audioData?: string;
 }
 
 export interface Conversation {

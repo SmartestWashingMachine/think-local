@@ -113,7 +113,17 @@ function buildMultimodalUserContent(
     }
   }
 
-  if (!imageData) return prompt;
+  const audioEdges = incomingEdges.filter((e) => e.targetHandle === 'audio');
+  let audioData: ArrayBuffer | null = null;
+  for (const edge of audioEdges) {
+    const output = getSourceOutput(edge.source, edge.sourceHandle, outputs, handleOutputs);
+    if (output instanceof ArrayBuffer) {
+      audioData = output;
+      break;
+    }
+  }
+
+  if (!imageData && !audioData) return prompt;
 
   const sortedEdges = [...incomingEdges].sort((a, b) => {
     const aIdx = inputOrder.indexOf(a.id);
@@ -127,6 +137,8 @@ function buildMultimodalUserContent(
       contentParts.push({ type: 'text', text: prompt });
     } else if (edge.targetHandle === 'image' && imageData) {
       contentParts.push({ type: 'image', data: imageData });
+    } else if (edge.targetHandle === 'audio' && audioData) {
+      contentParts.push({ type: 'audio', data: audioData });
     }
   }
   return contentParts;
@@ -383,6 +395,7 @@ export function useAgentGraphRunner() {
     ) => Promise<string>,
     onUserImageCapture?: (dataUrl: string) => void,
     userImageData?: ArrayBuffer,
+    userAudioData?: ArrayBuffer,
   ): Promise<string> => {
     const userQueryNode = nodes.find(
       (n) => (n.data as unknown as AgentNodeData).nodeType === 'user-query',
@@ -391,6 +404,10 @@ export function useAgentGraphRunner() {
 
     const userImageNode = nodes.find(
       (n) => (n.data as unknown as AgentNodeData).nodeType === 'user-image',
+    );
+
+    const userAudioNode = nodes.find(
+      (n) => (n.data as unknown as AgentNodeData).nodeType === 'user-audio',
     );
 
     const mcpNode = nodes.find(
@@ -416,9 +433,15 @@ export function useAgentGraphRunner() {
     if (userImageNode && userImageData) {
       outputs.set(userImageNode.id, userImageData);
     }
+    if (userAudioNode && userAudioData) {
+      outputs.set(userAudioNode.id, userAudioData);
+    }
 
     if (userImageNode && userImageData) {
       addTrace(userImageNode, 'output', `(user image: ${userImageData.byteLength} bytes)`);
+    }
+    if (userAudioNode && userAudioData) {
+      addTrace(userAudioNode, 'output', `(user audio: ${userAudioData.byteLength} bytes)`);
     }
 
     const topoOrder = topologicalSort(nodes, edges, userQueryNode.id);
@@ -426,6 +449,7 @@ export function useAgentGraphRunner() {
     for (const nodeId of topoOrder) {
       if (nodeId === userQueryNode.id) continue;
       if (userImageNode && nodeId === userImageNode.id) continue;
+      if (userAudioNode && nodeId === userAudioNode.id) continue;
 
       const node = nodes.find((n) => n.id === nodeId)!;
       const nodeData = node.data as unknown as AgentNodeData;
@@ -453,7 +477,7 @@ export function useAgentGraphRunner() {
           const inputSummary = successfulOutputs
             .map((v) => {
               if (typeof v === 'string') return `"${preview(v)}"`;
-              if (v instanceof ArrayBuffer) return `(image: ${v.byteLength} bytes)`;
+              if (v instanceof ArrayBuffer) return `(binary: ${v.byteLength} bytes)`;
               return v.map((item) => preview(item)).join('\n---\n');
             })
             .join(', ');
@@ -535,7 +559,7 @@ export function useAgentGraphRunner() {
       } else if (typeof result === 'string') {
         addTrace(node, 'output', preview(result));
       } else if (result instanceof ArrayBuffer) {
-        addTrace(node, 'output', `(image: ${result.byteLength} bytes)`);
+        addTrace(node, 'output', `(${nodeType === 'user-audio' ? 'audio' : 'image'}: ${result.byteLength} bytes)`);
       } else {
         addTrace(node, 'output', result.map((item) => preview(item)).join('\n---\n'));
       }

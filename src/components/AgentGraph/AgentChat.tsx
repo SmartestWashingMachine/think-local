@@ -38,6 +38,7 @@ interface AgentChatProps {
     content: string,
     onStream?: (messages: Message[], onToken: (token: string) => void, setAssistantContent: (content: string) => void) => Promise<string>,
     imageData?: string,
+    audioData?: string,
   ) => Promise<void>;
   onClearChat: () => void;
   updateUserMessageImage: (messageId: string, imageData: string) => void;
@@ -76,11 +77,14 @@ export default function AgentChat({
   const [inputValue, setInputValue] = useState('');
   const [attachedImageDataUrl, setAttachedImageDataUrl] = useState<string | null>(null);
   const [attachedImageFile, setAttachedImageFile] = useState<File | null>(null);
+  const [attachedAudioFile, setAttachedAudioFile] = useState<File | null>(null);
+  const [attachedAudioUrl, setAttachedAudioUrl] = useState<string | null>(null);
   const { executeGraph } = useAgentGraphRunner();
   const { executeTool, getToolDefinitions } = useMCP();
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesRef = useRef<HTMLDivElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
 
   const handleImageSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -101,6 +105,24 @@ export default function AgentChat({
     setAttachedImageFile(null);
   }, []);
 
+  const handleAudioSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAttachedAudioFile(file);
+    setAttachedAudioUrl(URL.createObjectURL(file));
+    if (audioInputRef.current) {
+      audioInputRef.current.value = '';
+    }
+  }, []);
+
+  const handleRemoveAudio = useCallback(() => {
+    setAttachedAudioFile(null);
+    setAttachedAudioUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+  }, []);
+
   useEffect(() => {
     if (messagesRef.current) {
       messagesRef.current.scrollTop = messagesRef.current.scrollHeight;
@@ -112,9 +134,16 @@ export default function AgentChat({
     if (!content || sending) return;
     const imageDataUrl = attachedImageDataUrl;
     const imageFile = attachedImageFile;
+    const audioFile = attachedAudioFile;
+    const audioUrl = attachedAudioUrl;
     setInputValue('');
     setAttachedImageDataUrl(null);
     setAttachedImageFile(null);
+    setAttachedAudioFile(null);
+    setAttachedAudioUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
     setSending(true);
 
     const nodes = loadGraphNodes() ?? [];
@@ -187,6 +216,10 @@ export default function AgentChat({
       if (imageFile) {
         userImageArrayBuffer = await imageFile.arrayBuffer();
       }
+      let userAudioArrayBuffer: ArrayBuffer | undefined;
+      if (audioFile) {
+        userAudioArrayBuffer = await audioFile.arrayBuffer();
+      }
       await sendMessage(
         content,
         async (history, onToken, setAssistantContent) => {
@@ -203,16 +236,18 @@ export default function AgentChat({
             generateCompletionWithTools,
             onUserImageCapture,
             userImageArrayBuffer,
+            userAudioArrayBuffer,
           );
           return result;
         },
         imageDataUrl ?? undefined,
+        audioUrl ?? undefined,
       );
     } finally {
       setSending(false);
       inputRef.current?.focus();
     }
-  }, [inputValue, sending, attachedImageDataUrl, attachedImageFile, sendMessage, updateUserMessageImage, messages, generateCompletionStream, generateCompletionWithTools, executeGraph, executeTool, getToolDefinitions, onBeforeSend, onTraceEntry]);
+  }, [inputValue, sending, attachedImageDataUrl, attachedImageFile, attachedAudioFile, attachedAudioUrl, sendMessage, updateUserMessageImage, messages, generateCompletionStream, generateCompletionWithTools, executeGraph, executeTool, getToolDefinitions, onBeforeSend, onTraceEntry]);
 
   const rootClass = expanded ? 'agent-chat agent-chat--expanded' : 'agent-chat';
 
@@ -227,6 +262,9 @@ export default function AgentChat({
             <div className="agent-chat__bubble">
               {msg.imageData && (
                 <img className="agent-chat__img" src={msg.imageData} alt="Webcam capture" />
+              )}
+              {msg.audioData && (
+                <audio className="agent-chat__audio" src={msg.audioData} controls />
               )}
               <p className="agent-chat__msg-content">{msg.content}</p>
               <span className="agent-chat__msg-time">{formatTime(msg.createdAt)}</span>
@@ -260,12 +298,46 @@ export default function AgentChat({
               <polyline points="21 15 16 10 5 21" />
             </svg>
           </button>
+          <input
+            ref={audioInputRef}
+            type="file"
+            accept="audio/*"
+            onChange={handleAudioSelect}
+            hidden
+          />
+          <button
+            className="agent-chat__image-btn"
+            onClick={() => audioInputRef.current?.click()}
+            type="button"
+            title="Attach audio"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 18V5l12-2v13" />
+              <circle cx="6" cy="18" r="3" />
+              <circle cx="18" cy="16" r="3" />
+            </svg>
+          </button>
           {attachedImageDataUrl && (
             <div className="agent-chat__image-preview">
               <img src={attachedImageDataUrl} alt="Attached" />
               <button
                 className="agent-chat__image-remove"
                 onClick={handleRemoveImage}
+                type="button"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+          )}
+          {attachedAudioUrl && (
+            <div className="agent-chat__image-preview">
+              <audio src={attachedAudioUrl} controls />
+              <button
+                className="agent-chat__image-remove"
+                onClick={handleRemoveAudio}
                 type="button"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

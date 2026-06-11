@@ -13,6 +13,7 @@ const positionMap: Record<string, Position> = {
 const handleClass: Record<string, string> = {
   string: 'handle--string',
   'list<string>': 'handle--list-string',
+  audio: 'handle--audio',
 };
 
 export default function OutputNode({ data, selected }: NodeProps) {

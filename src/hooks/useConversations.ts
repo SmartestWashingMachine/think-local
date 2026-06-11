@@ -100,6 +100,7 @@ export function useConversations() {
         setAssistantContent: (content: string) => void,
       ) => Promise<string>,
       imageData?: string,
+      audioData?: string,
     ) => {
       if (!activeId || !activeConversation) return;
 
@@ -109,6 +110,7 @@ export function useConversations() {
         content,
         createdAt: Date.now(),
         imageData,
+        audioData,
       };
 
       const messagesAfterUser = [...activeConversation.messages, userMessage];

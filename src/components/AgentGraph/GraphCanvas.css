@@ -59,3 +59,11 @@
   border: 2px solid #4fc3f7 !important;
   border-radius: 2px !important;
 }
+
+.react-flow__handle.handle--audio {
+  width: 12px !important;
+  height: 12px !important;
+  background: #ff7043 !important;
+  border: 2px solid #ff7043 !important;
+  border-radius: 2px !important;
+}

@@ -1,6 +1,7 @@
 export type AgentNodeType =
   | 'user-query'
   | 'user-image'
+  | 'user-audio'
   | 'webcam-image'
   | 'llm'
   | 'rag'
@@ -16,7 +17,7 @@ export type AgentNodeType =
 
 export type AgentNodeCategory = 'input' | 'process' | 'if' | 'output' | 'mcp';
 
-export type ValueType = 'string' | 'list<string>' | 'image';
+export type ValueType = 'string' | 'list<string>' | 'image' | 'audio';
 
 export interface HandleConfig {
   id: string;
@@ -104,6 +105,18 @@ export const AGENT_NODE_DEFINITIONS: Record<AgentNodeType, AgentNodeDefinition> 
     properties: [],
     defaults: {},
   },
+  'user-audio': {
+    type: 'user-audio',
+    category: 'input',
+    label: 'User Audio',
+    color: '#4caf50',
+    description: 'An audio file attached by the user to their message',
+    handles: [
+      { id: 'output', label: 'Audio', type: 'source', position: 'bottom', valueType: 'audio' },
+    ],
+    properties: [],
+    defaults: {},
+  },
   'webcam-image': {
     type: 'webcam-image',
     category: 'input',
@@ -122,10 +135,11 @@ export const AGENT_NODE_DEFINITIONS: Record<AgentNodeType, AgentNodeDefinition> 
     category: 'process',
     label: 'LLM',
     color: '#2196f3',
-    description: 'Calls a language model with an input string and optional image',
+    description: 'Calls a language model with an input string and optional image or audio',
     handles: [
       { id: 'input', label: 'Input', type: 'target', position: 'top', valueType: 'string' },
       { id: 'image', label: 'Image', type: 'target', position: 'left', valueType: 'image' },
+      { id: 'audio', label: 'Audio', type: 'target', position: 'left', valueType: 'audio' },
       { id: 'output', label: 'Output', type: 'source', position: 'bottom', valueType: 'string' },
     ],
     properties: [
