@@ -104,6 +104,7 @@ export function useAI() {
                   );
                 }
               },
+              n_ctx: 4096,
             }
           );
         } else {
