@@ -28,6 +28,7 @@ vi.mock('@xyflow/react', () => ({
   MiniMap: () => null,
   ReactFlowProvider: ({ children }: { children: React.ReactNode }) => children,
   useReactFlow: () => ({ screenToFlowPosition: vi.fn() }),
+  MarkerType: { ArrowClosed: 'arrowclosed' },
 }));
 
 vi.mock('./GraphCanvas', () => ({

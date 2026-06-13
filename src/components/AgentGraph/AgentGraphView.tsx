@@ -8,8 +8,9 @@ import {
   type Connection,
   type NodeChange,
 } from '@xyflow/react';
-import type { AgentNodeType, AgentNodeData, TraceEntry } from '../../types/agentGraph';
+import type { AgentNodeType, AgentNodeData, TraceEntry, ValueType } from '../../types/agentGraph';
 import { AGENT_NODE_DEFINITIONS } from '../../types/agentGraph';
+import { applyEdgeStyle } from './edgeStyles';
 import type { Message } from '../../types/chat';
 import { STORAGE_KEYS } from '../../constants/chat';
 import { PRESETS, getPreset, DEFAULT_PRESET_ID } from '../../constants/presets';
@@ -181,18 +182,11 @@ export default function AgentGraphView({ onClearChat, generateCompletionStream, 
       const sourceData = sourceNode?.data as unknown as AgentNodeData | undefined;
       const sourceDef = sourceData ? AGENT_NODE_DEFINITIONS[sourceData.nodeType] : undefined;
       const sourceHandleCfg = sourceDef?.handles.find((h) => h.id === connection.sourceHandle);
-      const isList = sourceHandleCfg?.valueType === 'list<string>';
+      const valueType: ValueType = sourceHandleCfg?.valueType ?? 'string';
 
       setEdges((eds) =>
         addEdge(
-          {
-            ...connection,
-            style: {
-              stroke: isList ? '#ccc' : '#666',
-              strokeDasharray: isList ? '6 3' : undefined,
-              strokeWidth: 2,
-            },
-          } as Edge,
+          applyEdgeStyle({ ...connection } as Edge, valueType),
           eds,
         ),
       );

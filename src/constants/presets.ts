@@ -1,6 +1,7 @@
 import type { Node, Edge } from '@xyflow/react';
-import type { AgentNodeType } from '../types/agentGraph';
+import type { AgentNodeType, ValueType } from '../types/agentGraph';
 import { AGENT_NODE_DEFINITIONS } from '../types/agentGraph';
+import { applyEdgeStyle } from '../components/AgentGraph/edgeStyles';
 
 function createNode(type: AgentNodeType, position: { x: number; y: number }, overrides?: Record<string, unknown>): Node {
   const def = AGENT_NODE_DEFINITIONS[type];
@@ -12,15 +13,14 @@ function createNode(type: AgentNodeType, position: { x: number; y: number }, ove
   } as unknown as Node;
 }
 
-function edge(source: string, target: string, sourceHandle = 'output', targetHandle = 'input'): Edge {
-  return {
+function edge(source: string, target: string, sourceHandle = 'output', targetHandle = 'input', valueType: ValueType = 'string'): Edge {
+  return applyEdgeStyle({
     id: crypto.randomUUID(),
     source,
     target,
     sourceHandle,
     targetHandle,
-    style: { stroke: '#666', strokeWidth: 2 },
-  } as Edge;
+  } as Edge, valueType);
 }
 
 export interface GraphPreset {
@@ -46,8 +46,8 @@ export const PRESETS: GraphPreset[] = [
         nodes: [uq, ui, ua, llm, cm],
         edges: [
           edge(uq.id, llm.id),
-          edge(ui.id, llm.id, 'output', 'image'),
-          edge(ua.id, llm.id, 'output', 'audio'),
+          edge(ui.id, llm.id, 'output', 'image', 'image'),
+          edge(ua.id, llm.id, 'output', 'audio', 'audio'),
           edge(llm.id, cm.id),
         ],
       };
@@ -69,7 +69,7 @@ export const PRESETS: GraphPreset[] = [
         nodes: [uq, ua, llm, tts, cm],
         edges: [
           edge(uq.id, llm.id),
-          edge(ua.id, llm.id, 'output', 'audio'),
+          edge(ua.id, llm.id, 'output', 'audio', 'audio'),
           edge(llm.id, tts.id),
           edge(llm.id, cm.id),
         ],
@@ -93,8 +93,8 @@ export const PRESETS: GraphPreset[] = [
         nodes: [uq, ua, ui, llm, tts, cm],
         edges: [
           edge(uq.id, llm.id),
-          edge(ua.id, llm.id, 'output', 'audio'),
-          edge(ui.id, llm.id, 'output', 'image'),
+          edge(ua.id, llm.id, 'output', 'audio', 'audio'),
+          edge(ui.id, llm.id, 'output', 'image', 'image'),
           edge(llm.id, tts.id),
           edge(llm.id, cm.id),
         ],
